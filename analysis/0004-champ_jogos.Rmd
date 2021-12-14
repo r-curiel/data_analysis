@@ -1,0 +1,136 @@
+---
+title: "Resultados Champions League 20-21 (gols por jogador)"
+author: "Rafael Vinicius Curiel"
+date: "13/12/2021"
+output: html_document
+---
+
+
+# Objetivo
+
+O script utiliza a base de dados com resultados dos jogos 20-21 da UEFA Champions. 
+
+"""As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, 
+atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de 
+indicadores de saúde e mesclagem com dados monetários."""
+
+O objetivo foi demonstrar o número de partidas por fase e uma tabela de frequência de gols
+por jogador.
+
+
+
+# Pacotes e comandos
+
+Utilizaremos comandos built-in R e da bibliteca tidyverse.
+
+Comandos:
+    glimpse; mutate; case_when; c; relocate; ggplot; geom_bar; word; print;
+    sub; recode; str_extract_all; gsub; RegEx.
+
+```{r}
+library(tidyverse)
+```
+
+
+
+# Jogos
+
+Champions League 2020-2021 em csv:
+```{r}    
+jogos <- read.csv("C:/Users/curie/Desktop/datasets/champ_20-21.csv")
+```
+
+
+
+## Exploração
+
+Visão estrutural:
+```{r}
+glimpse(jogos)
+```
+
+
+
+## Limpeza
+
+Criação da coluna de time vencedor:
+```{r}
+jogos <- jogos %>% mutate(time_vencedor = case_when(
+  c(jogos$team_home_score-jogos$team_away_score)==0 ~ "empate",
+  c(jogos$team_home_score-jogos$team_away_score)>0 ~ "mandante",
+  c(jogos$team_home_score-jogos$team_away_score)<0 ~ "visitante")) %>% 
+  relocate(time_vencedor, .after = team_away_score)
+```
+
+
+Visualização preliminar:
+```{r}
+ggplot(jogos) + 
+  geom_bar(aes(x = time_vencedor)) + 
+  labs(x = "Vencedor",
+       y = "Contagem") + 
+  theme_light()
+```
+
+
+Identificação das fases com exclusão de espaço:
+```{r}
+ajuste <- sub("^.", "", jogos$stage)
+fases <- word(ajuste, 1)
+print(fases)
+```
+
+
+Inclusão da variável renomeando os rótulos das colunas:
+```{r}
+jogos <- jogos %>% mutate(fases = recode(fases,
+                                         "Group"=1,
+                                         "Round"=2,
+                                         "Quarter-finals"=3,
+                                         "Semi-finals"=4,
+                                         "Final"=5)) %>% 
+                   relocate(fases, .after = stage)
+```
+
+
+
+# Resultado
+
+Visualização:
+```{r}
+ggplot(jogos) + 
+  geom_bar(aes(x = interaction(time_vencedor, fases), fill=factor(fases))) + 
+  labs(x = "Vencedor por Fase",
+       y = "Contagem") + 
+  scale_fill_brewer(palette=18)
+```
+
+
+
+# Extra: gols por jogadores
+
+Identificação dos jogadores que fizeram gols (com RegEx):
+```{r}
+extrai_gol <- str_extract_all(jogos$events_list, 
+                     "'Goal', 'action_player_1': '\\w*(.*?)\\w*\\'",
+                     simplify = TRUE)
+extrai_gol <- gsub("'Goal', 'action_player_1': ", "", extrai_gol)
+extrai_gol <- gsub("'", "", extrai_gol)
+```
+
+
+Extração dos penaltis (com RegEx):
+```{r}
+extrai_penalti <- str_extract_all(jogos$events_list,
+              "'event_type': 'Penalty', 'action_player_1': '\\w*(.*?)\\w*\\'",
+              simplify = TRUE)
+
+extrai_penalti <- gsub("'event_type': 'Penalty', 'action_player_1': ", "", extrai_penalti)
+extrai_penalti <- gsub("'", "", extrai_penalti)
+```
+
+
+Tabela de frequências dos gols por jogador:
+```{r}
+sort(table(cbind(extrai_gol, extrai_penalti)), decreasing = T)
+```

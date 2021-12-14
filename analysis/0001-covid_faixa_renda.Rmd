@@ -1,0 +1,208 @@
+---
+title: "Incidência de casos de Covid-19 por faixa de renda"
+author: "Rafael Vinicius Curiel"
+date: "13/12/2021"
+output:
+  html_document: default
+  word_document: default
+---
+
+
+
+## Pacotes e comandos
+
+Utilizaremos comandos das biblitecas tidyverse e readxl.
+
+Comandos:
+    glimpse; dim; head; names; rename; mutate; recode; cut; 
+    quantile; select; group_by; summarise; mean; sd; n; ungroup; 
+    droplevels; right_join; ggplot; geom_col.
+  
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+
+
+## Covid-19
+
+Dataset Covid-19 em csv com títulos, delimitador em vírgula e valores decimais com ponto.
+```{r}
+dataset <- read.csv('C:/Users/curie/Desktop/datasets/covid.csv', 
+                    header = TRUE, 
+                    sep = ",", 
+                    dec = ".")
+```
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+glimpse(dataset)
+```
+
+
+### Limpeza
+
+Renomear colunas:
+```{r}
+dataset <- dataset %>% rename(country=1,
+                             region=2,
+                             case_total=3,
+                             case_relative=4,
+                             case_week=5,
+                             case_week_relative=6,
+                             case_day=7,
+                             death_total=8,
+                             death_relative=9,
+                             death_week=10,
+                             death_week_relative=11,
+                             death_day=12,
+                             transmission=13)
+```
+
+
+Remoção dos índices 'Global' e 'Others':
+```{r}
+dataset <- dataset[-c(1),]
+dataset <- dataset[!(dataset$region=='Other'),]
+```
+
+
+Renomear valores de transmissão e criação da variável grupos por quartil:
+```{r}
+dataset <- dataset %>% mutate(transmission = recode(transmission,
+                                                              "Clusters of cases" = "cluster_case",
+                                                              "Community transmission" = "com_transm",
+                                                              "No cases" = "no_case",
+                                                              "Pending" = "pend",
+                                                              "Sporadic cases" = "spor_case")) %>% 
+                      mutate(group = cut(case_relative, 
+                                         c(-Inf, 
+                                           quantile(dataset$case_relative, 
+                                           type=5, 
+                                           probs = c(0.25, 0.50, 0.75),
+                                           TRUE),
+                                           Inf),
+                                         c('First_quant', 
+                                           'Second_quant', 
+                                           'Third_quant', 
+                                           'Fourth_quant')))  
+```
+
+
+Reposicionamento de grupo e remoção de mortes:
+```{r}
+dataset <- dataset %>% select('country', 'region', 'group', everything(), -'death_day')
+```
+
+
+
+### Resumo estatístico
+
+Por quartil
+```{r}
+g_quant <- dataset %>% group_by(group) %>%
+                       summarise(avg=mean(case_relative, na.rm = T),
+                                standar_dev=sd(case_relative, na.rm = T),
+                                obs.=n()) %>%
+                       ungroup () %>% droplevels(.)
+
+g_quant
+```
+
+
+Por região
+```{r}
+g_region <- dataset %>% group_by(region) %>%
+                       summarise(avg=mean(case_relative, na.rm = T),
+                                standar_dev=sd(case_relative, na.rm = T),
+                                obs.=n(),
+                                '%perc'=(round(n()/nrow(dataset)*100,2))) %>%
+                       ungroup () %>% droplevels(.)
+
+g_region
+```
+
+
+Por transmissão
+```{r}
+g_transmission <- dataset %>% group_by(transmission) %>%
+                       summarise(avg=mean(case_relative, na.rm = T),
+                                standar_dev=sd(case_relative, na.rm = T),
+                                obs.=n(),
+                                perc=(round(n()/nrow(dataset)*100,2))) %>%
+                       ungroup () %>% droplevels(.)
+
+g_transmission
+```
+
+
+
+## PIB per capta
+
+Dataset WBD PIB per capta em xls.
+```{r}
+pib <- read_excel('C:/Users/curie/Desktop/datasets/wbd_income.xls')
+```
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+glimpse(pib)
+```
+
+
+
+### Limpeza
+
+Renomear colunas:
+```{r}
+pib <- pib %>% rename(country=1,
+                     c_code=2,
+                     income=3)
+```
+
+
+
+## Covid-19 e PIB
+
+
+### Combinação das bases
+
+Combinação da base de dados
+```{r}
+dataset2 <- pib %>% right_join(dataset, by ="country") %>%
+                    select(everything(), -c('c_code', '2019')) %>%
+                    mutate(income = recode(income,
+                                          "High income" = "1 - High",
+                                          "Low income" = "4 - Low",
+                                          "Lower middle income" = "3 - L_Middle",
+                                          "Upper middle income" = "2 - H_Middle"))
+```
+
+
+
+## Resultados
+
+
+### Gráfico resumido de casos por faixa de renda
+```{r}
+dataset2 %>% group_by(income) %>%
+             summarise(avg=mean(case_relative, na.rm = T),
+                       standar_dev=sd(case_relative, na.rm = T),
+                       obs.=n(),
+                       perc=(round(n()/nrow(dataset2)*100,2))) %>%
+                       ungroup () %>% droplevels(.) %>%
+  ggplot() + 
+  geom_col(aes(x=income, y=avg), fill="dark blue") + 
+    labs(x = "Faixa de Renda",
+         y = "Média de Casos Relativos",
+         title = "Análise de casos de Covid-19 por faixa de renda")
+```

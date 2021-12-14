@@ -1,0 +1,224 @@
+---
+title: "Variação da Receita e Resultado em empresas de capital aberto em 2020"
+author: "Rafael Vinicius Curiel"
+date: "13/12/2021"
+output: html_document
+---
+
+
+## Objetivo
+
+O script utiliza duas bases de dados CVM Resultados Financeiros e CVM Dados Cadastrais.
+
+"""As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, 
+atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de 
+indicadores de saúde e mesclagem com dados monetários."""
+
+O objetivo foi observar a evolução das receitas de vendas e o lucro líquido no 1º ano dapandemia
+por setor da economia.
+
+
+
+
+## Pacotes e comandos
+
+Utilizaremos comandos das biblitecas tidyverse e readxl.
+
+Comandos:
+    glimpse; dim; head; names; options; unique; filter; group_by; arrange;
+    ungroup; droplevels; as.numeric; mutate; distinct; count; select; 
+    left_join; lag; summarise; n; mean; is.infinite; is.nan; if_else.
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+
+
+
+## Resultados financeiros
+
+Dataset CVM - Comissão de Valores Mobiliários em xlsx:
+```{r}
+dataset <- read_excel("C:/Users/curie/Desktop/datasets/cvm_result.xlsx")
+```
+
+
+
+
+### Exploração
+
+Visão estrutural - Amplitude de contas demonstradas:
+```{r include=FALSE}
+options(max.print = 3000)
+unique(dataset$`DS_CONTA`)
+```
+
+
+
+
+### Limpeza
+
+Inclusão das colunas de Receita de Vendas (3.01) e Lucro/Prejuízo Líquido (3.11):
+```{r}
+dataset <- dataset %>% filter(CD_CONTA=="3.01"|CD_CONTA=="3.11")
+```
+
+
+Agrupamento de valores de 2019 e 2020 em dataset ajustado:
+```{r}
+dataset_aj <- dataset %>% 
+  group_by(CD_CONTA, CD_CVM) %>% 
+  arrange(dataset, DT_REFER, .by_group = T) %>% 
+  ungroup () %>% droplevels(.)
+```
+
+
+Conversão da coluna 'VL_CONTA' em numérico:
+```{r}
+valor_conta <- as.numeric(dataset_aj$VL_CONTA)
+```
+
+
+Ajuste da amplitude dos valores em 'VL_CONTA':
+```{r}
+dataset_aj <- dataset_aj %>% mutate(VALORES = valor_conta / 10000000000)
+```
+
+
+Exclusão de linhas duplicadas:
+```{r}
+dataset_aj <- distinct(dataset_aj)
+```
+
+
+Validação de 4 contas por empresa (2 de receita e 2 de resultado):
+```{r}
+contagem <- dataset_aj %>% count(CD_CVM, CD_CONTA)
+```  
+Observação: CD_CVM 26034 possui duplicidade (451228)
+  
+    
+Exclusão da duplicidade identificada:
+```{r}
+dataset_aj <- dataset_aj %>% filter(!(CD_CVM=="26034"&VALORES==451228))
+```  
+
+
+Nova validação:
+```{r}
+contagem <- dataset_aj %>% count(CD_CVM, CD_CONTA)
+```  
+
+
+
+## Dados cadastrais
+
+Dataset CVM - Dados Cadastrais em xlsx:
+```{r}
+cadastro <- read_excel("C:/Users/curie/Desktop/datasets/cvm_data.xlsx")
+```
+
+
+Filtro de dados para mesclagem:
+```{r}
+cadastro <- cadastro %>% select (CD_CVM, SETOR_ATIV)
+```    
+
+
+
+## Resultados
+
+### Dataset posição financeira por segmento econômico
+```{r}
+dataset_aj <- dataset_aj %>% left_join(cadastro, by = "CD_CVM")
+```
+
+
+
+### Exploração
+
+Visão estrutural - Amplitude do segmento de atualção:
+```{r}
+unique(dataset_aj$SETOR_ATIV)
+```
+
+
+
+### Ajuste
+
+Cálculo da variação percentual dos resultados:
+```{r}
+dataset_aj <- dataset_aj %>% 
+  group_by(CD_CVM, CD_CONTA) %>%
+  mutate(VARIACAO = ((VALORES - lag(VALORES, n = 1L))/lag(VALORES, n = 1L))) %>% 
+  ungroup () %>% droplevels(.)
+```
+
+
+Remoção de valores infinitos e NaN:
+```{r}
+infinitos <- is.infinite(dataset_aj$VARIACAO)
+nan <- is.nan(dataset_aj$VARIACAO)
+
+dataset_aj <- dataset_aj %>% mutate(INF = infinitos, NAN = nan) %>% 
+                               filter(INF == FALSE & NAN == FALSE)
+```
+
+
+Exclusão de valores que geram distorções (> 100% e < -100%)
+```{r}
+dataset_final <- dataset_aj %>% filter(!(VARIACAO > 1|VARIACAO < -1))
+```
+
+
+Verificação dos resultados com exclusão de NaN:
+```{r}
+summarise(dataset_final,
+          observações=n(),
+          média=mean(VARIACAO, na.rm = TRUE))
+```
+
+
+
+## Visualização
+
+Demonstração sintética das variações de receita e resultado:
+```{r}
+dataset_final %>% group_by(CD_CONTA) %>% 
+  summarise(média=mean(VARIACAO, na.rm = TRUE)) %>% 
+  ungroup () %>% droplevels(.)
+```
+
+
+Demonstração analítica das variações de receita e resultado:
+```{r}
+tabela <- dataset_final %>% group_by(CD_CONTA, SETOR_ATIV) %>% 
+  summarise(média=mean(VARIACAO, na.rm = TRUE)) %>% 
+  ungroup () %>% droplevels(.)
+
+print (tabela, n=200)
+```
+
+
+Atualização dos valores com inflação ICPA 2020 de 4,52% a.a.:
+```{r}
+dataset_atualizado <- dataset_aj %>% 
+  mutate(ano = substr(DT_FIM_EXERC, 1, 4),
+         VALORES_ATUAL = if_else(ano == "2019",
+                                 VALORES*1.0452,
+                                 VALORES*1)) %>%
+  group_by(CD_CVM, CD_CONTA) %>%
+  mutate(VARIACAO_ATUAL = ((VALORES_ATUAL - lag(VALORES_ATUAL, n = 1L))/lag(VALORES_ATUAL, n = 1L))) %>% 
+  ungroup () %>% droplevels(.) %>%
+  filter((!(VARIACAO_ATUAL > 1|VARIACAO_ATUAL < -1)))
+```
+
+
+Resumo estatísticas descritivas:
+```{r}
+dataset_atualizado %>% group_by(CD_CONTA) %>% 
+  summarise(média=mean(VARIACAO_ATUAL, na.rm = TRUE)) %>% 
+  ungroup () %>% droplevels(.)
+```

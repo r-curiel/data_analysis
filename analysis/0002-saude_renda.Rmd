@@ -1,0 +1,143 @@
+---
+title: "Indicadores de saúde por faixa de renda"
+author: "Rafael Vinicius Curiel"
+date: "13/12/2021"
+output: html_document
+---
+
+
+## Objetivo
+
+O script utiliza duas bases de dados: indicadores gerais globais e PIB per capta, com ênfase
+em indicadores de saúde. 
+
+As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, 
+atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de 
+indicadores de saúde e mesclagem com dados monetários.
+
+O objetivo foi demonstrar a relação entre a qualidade da saúde global pela sua faixa de renda.
+
+
+
+## Pacotes e comandos
+
+Utilizaremos comandos built-in R e biblitecas tidyverse e readxl.
+
+Comandos:
+    glimpse; dim; head; names; rename; mutate; na_if; fitler; str_detect;
+    pivot_wider; left_join; select.
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+
+
+## Indicadores de países
+
+Dataset WDI - Worold Bank Institute em xlsx:
+```{r}    
+dataset <- read_excel('C:/Users/curie/Desktop/wdi_index.xls')
+```
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+glimpse(dataset)
+```
+
+
+
+### Limpeza
+
+Renomear colunas:
+```{r}
+dataset <- dataset %>% rename(country=1,
+                             code=2,
+                             serie_name=3,
+                             serie_code=4,
+                             ref_2019=5,
+                             topic=6)
+```
+
+
+Substituição de valores '..' em 'ref_2019' por 'NA':
+```{r}
+dataset <- dataset %>% mutate(ref_2019 = na_if(ref_2019, '..'))
+```
+
+
+Conversão da coluna 'ref_2019' em numérico:
+```{r}
+dataset <- dataset %>% mutate(ref_2019 = as.numeric(ref_2019))
+```
+
+
+Extração de dados de saúde:
+```{r}
+saude <- dataset %>% filter(str_detect(topic, '^Health'))
+```
+
+
+Transposição de base long em wide
+```{r}
+saude <- pivot_wider(saude,
+                     id_cols=c('country', 'code'),
+                     names_from=c('serie_name', 'serie_code'),
+                     values_from='ref_2019')
+```
+
+
+
+
+## PIB per capta
+
+Dataset WBD PIB per capta em xls.
+```{r}
+pib <- read_excel('C:/Users/curie/Desktop/wbd_income.xls')
+```
+
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+glimpse(pib)
+```
+
+
+
+### Limpeza
+
+Renomear colunas:
+```{r}
+pib <- pib %>% rename(country=1,
+                     code=2,
+                     income=3,
+                     ano=4)
+```
+
+
+
+
+## Resultados
+
+### Dataset indicadores de saúde por faixa de renda
+
+```{r}
+final <- saude %>% left_join(pib, by='code') %>%
+                      select(country.x, code, income, everything(), -c(ano))
+```
+
+
+### Visualização dos dados
+
+```{r}
+head(final)
+```
