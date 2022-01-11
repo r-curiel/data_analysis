@@ -108,6 +108,7 @@ WITH dados AS (
         FROM `secret-grammar-334721.EC1_bikes.2020_06` AS k
 )
 
+
 /*
 # 1 Contagem do total de linhas
 SELECT COUNT(1) as Total_linhas
@@ -134,6 +135,7 @@ SELECT COUNT(1)
 FROM dados
 WHERE duracao > 0
 
+
 # 5 Proporção da quantidade de credenciais
 SELECT member_casual, 100*(quantidade / total) as pct 
 FROM (
@@ -143,18 +145,17 @@ FROM (
     GROUP by member_casual
 )
 
-# 6 Média de duração por dia da semana
+
+# 6 Comparação do tempo entre credencial
+SELECT AVG(duracao), member_casual
+FROM dados 
+WHERE duracao > 0
+GROUP BY member_casual
+*/
+
+# 6 Média de duração por dia da semana por credencial
 SELECT ano, mes, dia_semana, AVG(duracao), member_casual
 FROM dados 
 WHERE duracao > 0
 GROUP BY ano, mes, dia_semana, member_casual
 ORDER BY ano DESC, mes DESC, dia_semana ASC
-
-
-# 7 Comparação do tempo entre credencial
-SELECT AVG(duracao), member_casual
-FROM dados 
-WHERE duracao > 0
-GROUP BY member_casual
-
-*/
