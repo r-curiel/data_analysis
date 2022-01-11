@@ -107,8 +107,6 @@ WITH dados AS (
             k.member_casual
         FROM `secret-grammar-334721.EC1_bikes.2020_06` AS k
 )
-
-
 /*
 # 1 Contagem do total de linhas
 SELECT COUNT(1) as Total_linhas
@@ -151,11 +149,22 @@ SELECT AVG(duracao), member_casual
 FROM dados 
 WHERE duracao > 0
 GROUP BY member_casual
-*/
 
-# 6 Média de duração por dia da semana por credencial
+
+# 7 Média de duração por dia da semana (Exportar)
 SELECT ano, mes, dia_semana, AVG(duracao), member_casual
 FROM dados 
 WHERE duracao > 0
 GROUP BY ano, mes, dia_semana, member_casual
 ORDER BY ano DESC, mes DESC, dia_semana ASC
+
+
+# Continuidade: Total de minutos e registros por mês
+SELECT ano, mes, SUM(duracao) AS tempo, COUNT(1) AS contagem, member_casual
+FROM dados 
+WHERE duracao > 0
+GROUP BY ano, mes, member_casual
+ORDER BY ano DESC, mes DESC
+
+*/
+
