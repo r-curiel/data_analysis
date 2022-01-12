@@ -120,7 +120,7 @@ GROUP BY ano, mes, member_casual
 ORDER BY ano DESC, mes DESC
 
 
-# 3 Nova Média filtrada
+# 2.1 Nova Média filtrada
 SELECT CONCAT(ano,'_', mes) AS periodo, AVG(duracao) AS dur_avg, member_casual
 FROM dados
 WHERE duracao > 0
@@ -128,13 +128,13 @@ GROUP BY ano, mes, member_casual
 ORDER BY ano DESC, mes DESC
 
 
-# 4 Contagem da base de dados vs base de dados filtrada
+# 3 Contagem da base de dados vs base de dados filtrada
 SELECT COUNT(1)
 FROM dados
 WHERE duracao > 0
 
 
-# 5 Proporção da quantidade de credenciais
+# 4 Proporção da quantidade de credenciais
 SELECT member_casual, 100*(quantidade / total) as pct 
 FROM (
     SELECT member_casual, count(*) AS quantidade, sum(count(*)) OVER() AS total
@@ -144,27 +144,15 @@ FROM (
 )
 
 
-# 6 Comparação do tempo entre credencial
-SELECT AVG(duracao), member_casual
-FROM dados 
-WHERE duracao > 0
-GROUP BY member_casual
-
-
-# 7 Média de duração por dia da semana (Exportar)
+# 5 Média de duração por dia da semana
 SELECT ano, mes, dia_semana, AVG(duracao), member_casual
 FROM dados 
 WHERE duracao > 0
 GROUP BY ano, mes, dia_semana, member_casual
 ORDER BY ano DESC, mes DESC, dia_semana ASC
 
-
-# Continuidade: Total de minutos e registros por mês
-SELECT ano, mes, SUM(duracao) AS tempo, COUNT(1) AS contagem, member_casual
-FROM dados 
-WHERE duracao > 0
-GROUP BY ano, mes, member_casual
-ORDER BY ano DESC, mes DESC
-
 */
+
+SELECT * 
+FROM dados
 
