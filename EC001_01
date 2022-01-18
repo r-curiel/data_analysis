@@ -1,0 +1,158 @@
+WITH dados AS (
+        SELECT
+            x.ride_id,
+            EXTRACT(YEAR FROM x.started_at) AS ano,
+            EXTRACT(MONTH FROM x.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from x.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(x.ended_at, x.started_at, minute) AS duracao,
+            x.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2021_05` AS x
+            UNION ALL 
+        SELECT
+            a.ride_id,
+            EXTRACT(YEAR FROM a.started_at) AS ano,
+            EXTRACT(MONTH FROM a.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from a.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(a.ended_at, a.started_at, minute) AS duracao,
+            a.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2021_04` AS a
+            UNION ALL 
+        SELECT
+            b.ride_id,
+            EXTRACT(YEAR FROM b.started_at) AS ano,
+            EXTRACT(MONTH FROM b.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from b.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(b.ended_at, b.started_at, minute) AS duracao,
+            b.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2021_03` AS b
+            UNION ALL
+        SELECT
+            c.ride_id,
+            EXTRACT(YEAR FROM c.started_at) AS ano,
+            EXTRACT(MONTH FROM c.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from c.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(c.ended_at, c.started_at, minute) AS duracao,
+            c.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2021_02` AS c 
+            UNION ALL 
+        SELECT
+            d.ride_id,
+            EXTRACT(YEAR FROM d.started_at) AS ano,
+            EXTRACT(MONTH FROM d.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from d.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(d.ended_at, d.started_at, minute) AS duracao,
+            d.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2021_01` AS d
+            UNION ALL 
+        SELECT
+            e.ride_id,
+            EXTRACT(YEAR FROM e.started_at) AS ano,
+            EXTRACT(MONTH FROM e.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from e.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(e.ended_at, e.started_at, minute) AS duracao,
+            e.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_12` AS e
+            UNION ALL 
+        SELECT
+            f.ride_id,
+            EXTRACT(YEAR FROM f.started_at) AS ano,
+            EXTRACT(MONTH FROM f.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from f.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(f.ended_at, f.started_at, minute) AS duracao,
+            f.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_11` AS f
+            UNION ALL 
+        SELECT
+            g.ride_id,
+            EXTRACT(YEAR FROM g.started_at) AS ano,
+            EXTRACT(MONTH FROM g.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from g.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(g.ended_at, g.started_at, minute) AS duracao,
+            g.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_10` AS g
+            UNION ALL 
+        SELECT
+            h.ride_id,
+            EXTRACT(YEAR FROM h.started_at) AS ano,
+            EXTRACT(MONTH FROM h.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from h.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(h.ended_at, h.started_at, minute) AS duracao,
+            h.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_09` AS h
+            UNION ALL 
+        SELECT
+            i.ride_id,
+            EXTRACT(YEAR FROM i.started_at) AS ano,
+            EXTRACT(MONTH FROM i.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from i.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(i.ended_at, i.started_at, minute) AS duracao,
+            i.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_08` AS i
+            UNION ALL 
+        SELECT
+            j.ride_id,
+            EXTRACT(YEAR FROM j.started_at) AS ano,
+            EXTRACT(MONTH FROM j.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from j.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(j.ended_at, j.started_at, minute) AS duracao,
+            j.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_07` AS j
+            UNION ALL 
+        SELECT
+            k.ride_id,
+            EXTRACT(YEAR FROM k.started_at) AS ano,
+            EXTRACT(MONTH FROM k.started_at) AS mes, 
+            EXTRACT(DAYOFWEEK from k.started_at) AS dia_semana,
+            TIMESTAMP_DIFF(k.ended_at, k.started_at, minute) AS duracao,
+            k.member_casual
+        FROM `secret-grammar-334721.EC1_bikes.2020_06` AS k
+)
+/*
+# 1 Contagem do total de linhas
+SELECT COUNT(1) as Total_linhas
+FROM dados
+
+
+# 2 Exploração da Média com identificação de erros
+SELECT CONCAT(ano,'_', mes) AS periodo, AVG(duracao) AS dur_avg, member_casual
+FROM dados
+GROUP BY ano, mes, member_casual
+ORDER BY ano DESC, mes DESC
+
+
+# 2.1 Nova Média filtrada
+SELECT CONCAT(ano,'_', mes) AS periodo, AVG(duracao) AS dur_avg, member_casual
+FROM dados
+WHERE duracao > 0
+GROUP BY ano, mes, member_casual
+ORDER BY ano DESC, mes DESC
+
+
+# 3 Contagem da base de dados vs base de dados filtrada
+SELECT COUNT(1)
+FROM dados
+WHERE duracao > 0
+
+
+# 4 Proporção da quantidade de credenciais
+SELECT member_casual, 100*(quantidade / total) as pct 
+FROM (
+    SELECT member_casual, count(*) AS quantidade, sum(count(*)) OVER() AS total
+    FROM dados
+    WHERE duracao > 0
+    GROUP by member_casual
+)
+
+
+# 5 Média de duração por dia da semana
+SELECT ano, mes, dia_semana, AVG(duracao), member_casual
+FROM dados 
+WHERE duracao > 0
+GROUP BY ano, mes, dia_semana, member_casual
+ORDER BY ano DESC, mes DESC, dia_semana ASC
+
+*/
+
+SELECT * 
+FROM dados
+
