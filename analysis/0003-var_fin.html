@@ -171,16 +171,8 @@ pre code {
 </div>
 
 
-<div id="objetivo" class="section level2">
-<h2>Objetivo</h2>
-<p>O script utiliza duas bases de dados CVM Resultados Financeiros e CVM Dados Cadastrais.</p>
-<p>“““As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de indicadores de saúde e mesclagem com dados monetários.”“”</p>
-<p>O objetivo foi observar a evolução das receitas de vendas e o lucro líquido no 1º ano dapandemia por setor da economia.</p>
-</div>
 <div id="pacotes-e-comandos" class="section level2">
 <h2>Pacotes e comandos</h2>
-<p>Utilizaremos comandos das biblitecas tidyverse e readxl.</p>
-<p>Comandos: glimpse; dim; head; names; options; unique; filter; group_by; arrange; ungroup; droplevels; as.numeric; mutate; distinct; count; select; left_join; lag; summarise; n; mean; is.infinite; is.nan; if_else.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
 <pre><code>## Warning: package &#39;tidyverse&#39; was built under R version 4.1.2</code></pre>
 <pre><code>## -- Attaching packages --------------------------------------- tidyverse 1.3.1 --</code></pre>
@@ -196,7 +188,7 @@ pre code {
 <div id="resultados-financeiros" class="section level2">
 <h2>Resultados financeiros</h2>
 <p>Dataset CVM - Comissão de Valores Mobiliários em xlsx:</p>
-<pre class="r"><code>dataset &lt;- read_excel(&quot;C:/Users/curie/Desktop/datasets/cvm_result.xlsx&quot;)</code></pre>
+<pre class="r"><code>dataset &lt;- read_excel(&quot;D:/datasets/cvm_result.xlsx&quot;)</code></pre>
 <div id="exploração" class="section level3">
 <h3>Exploração</h3>
 <p>Visão estrutural - Amplitude de contas demonstradas:</p>
@@ -228,7 +220,7 @@ pre code {
 <div id="dados-cadastrais" class="section level2">
 <h2>Dados cadastrais</h2>
 <p>Dataset CVM - Dados Cadastrais em xlsx:</p>
-<pre class="r"><code>cadastro &lt;- read_excel(&quot;C:/Users/curie/Desktop/datasets/cvm_data.xlsx&quot;)</code></pre>
+<pre class="r"><code>cadastro &lt;- read_excel(&quot;D:/datasets/cvm_data.xlsx&quot;)</code></pre>
 <p>Filtro de dados para mesclagem:</p>
 <pre class="r"><code>cadastro &lt;- cadastro %&gt;% select (CD_CVM, SETOR_ATIV)</code></pre>
 </div>

@@ -5,27 +5,7 @@ date: "13/12/2021"
 output: html_document
 ---
 
-
-# Objetivo
-
-O script utiliza a base de dados com resultados dos jogos 20-21 da UEFA Champions. 
-
-"""As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, 
-atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de 
-indicadores de saúde e mesclagem com dados monetários."""
-
-O objetivo foi demonstrar o número de partidas por fase e uma tabela de frequência de gols
-por jogador.
-
-
-
 # Pacotes e comandos
-
-Utilizaremos comandos built-in R e da bibliteca tidyverse.
-
-Comandos:
-    glimpse; mutate; case_when; c; relocate; ggplot; geom_bar; word; print;
-    sub; recode; str_extract_all; gsub; RegEx.
 
 ```{r}
 library(tidyverse)
@@ -37,7 +17,7 @@ library(tidyverse)
 
 Champions League 2020-2021 em csv:
 ```{r}    
-jogos <- read.csv("C:/Users/curie/Desktop/datasets/champ_20-21.csv")
+jogos <- read.csv("D:/datasets/champ_20-21.csv")
 ```
 
 

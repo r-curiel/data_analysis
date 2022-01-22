@@ -5,29 +5,7 @@ date: "13/12/2021"
 output: html_document
 ---
 
-
-## Objetivo
-
-O script utiliza duas bases de dados CVM Resultados Financeiros e CVM Dados Cadastrais.
-
-"""As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, 
-atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de 
-indicadores de saúde e mesclagem com dados monetários."""
-
-O objetivo foi observar a evolução das receitas de vendas e o lucro líquido no 1º ano dapandemia
-por setor da economia.
-
-
-
-
 ## Pacotes e comandos
-
-Utilizaremos comandos das biblitecas tidyverse e readxl.
-
-Comandos:
-    glimpse; dim; head; names; options; unique; filter; group_by; arrange;
-    ungroup; droplevels; as.numeric; mutate; distinct; count; select; 
-    left_join; lag; summarise; n; mean; is.infinite; is.nan; if_else.
 
 ```{r}
 library(tidyverse)
@@ -36,14 +14,12 @@ library(readxl)
 
 
 
-
 ## Resultados financeiros
 
 Dataset CVM - Comissão de Valores Mobiliários em xlsx:
 ```{r}
-dataset <- read_excel("C:/Users/curie/Desktop/datasets/cvm_result.xlsx")
+dataset <- read_excel("D:/datasets/cvm_result.xlsx")
 ```
-
 
 
 
@@ -54,7 +30,6 @@ Visão estrutural - Amplitude de contas demonstradas:
 options(max.print = 3000)
 unique(dataset$`DS_CONTA`)
 ```
-
 
 
 
@@ -117,7 +92,7 @@ contagem <- dataset_aj %>% count(CD_CVM, CD_CONTA)
 
 Dataset CVM - Dados Cadastrais em xlsx:
 ```{r}
-cadastro <- read_excel("C:/Users/curie/Desktop/datasets/cvm_data.xlsx")
+cadastro <- read_excel("D:/datasets/cvm_data.xlsx")
 ```
 
 

@@ -5,27 +5,7 @@ date: "13/12/2021"
 output: html_document
 ---
 
-
-## Objetivo
-
-O script utiliza duas bases de dados: indicadores gerais globais e PIB per capta, com ênfase
-em indicadores de saúde. 
-
-As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, 
-atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de 
-indicadores de saúde e mesclagem com dados monetários.
-
-O objetivo foi demonstrar a relação entre a qualidade da saúde global pela sua faixa de renda.
-
-
-
 ## Pacotes e comandos
-
-Utilizaremos comandos built-in R e biblitecas tidyverse e readxl.
-
-Comandos:
-    glimpse; dim; head; names; rename; mutate; na_if; fitler; str_detect;
-    pivot_wider; left_join; select.
 
 ```{r}
 library(tidyverse)
@@ -38,7 +18,7 @@ library(readxl)
 
 Dataset WDI - Worold Bank Institute em xlsx:
 ```{r}    
-dataset <- read_excel('C:/Users/curie/Desktop/wdi_index.xls')
+dataset <- read_excel('D:/datasets/wdi_index.xls')
 ```
 
 
@@ -98,7 +78,7 @@ saude <- pivot_wider(saude,
 
 Dataset WBD PIB per capta em xls.
 ```{r}
-pib <- read_excel('C:/Users/curie/Desktop/wbd_income.xls')
+pib <- read_excel('D:/datasets/wbd_income.xls')
 ```
 
 

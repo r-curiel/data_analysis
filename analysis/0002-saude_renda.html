@@ -171,16 +171,8 @@ pre code {
 </div>
 
 
-<div id="objetivo" class="section level2">
-<h2>Objetivo</h2>
-<p>O script utiliza duas bases de dados: indicadores gerais globais e PIB per capta, com ênfase em indicadores de saúde.</p>
-<p>As manipulações de dados consistiram em importação das bases, exploração de sua estrutura, atualização de rótulos de variáveis, conversão de formato long para wide, isolamento de indicadores de saúde e mesclagem com dados monetários.</p>
-<p>O objetivo foi demonstrar a relação entre a qualidade da saúde global pela sua faixa de renda.</p>
-</div>
 <div id="pacotes-e-comandos" class="section level2">
 <h2>Pacotes e comandos</h2>
-<p>Utilizaremos comandos built-in R e biblitecas tidyverse e readxl.</p>
-<p>Comandos: glimpse; dim; head; names; rename; mutate; na_if; fitler; str_detect; pivot_wider; left_join; select.</p>
 <pre class="r"><code>library(tidyverse)</code></pre>
 <pre><code>## Warning: package &#39;tidyverse&#39; was built under R version 4.1.2</code></pre>
 <pre><code>## -- Attaching packages --------------------------------------- tidyverse 1.3.1 --</code></pre>
@@ -196,7 +188,7 @@ pre code {
 <div id="indicadores-de-países" class="section level2">
 <h2>Indicadores de países</h2>
 <p>Dataset WDI - Worold Bank Institute em xlsx:</p>
-<pre class="r"><code>dataset &lt;- read_excel(&#39;C:/Users/curie/Desktop/wdi_index.xls&#39;)</code></pre>
+<pre class="r"><code>dataset &lt;- read_excel(&#39;D:/datasets/wdi_index.xls&#39;)</code></pre>
 <div id="exploração" class="section level3">
 <h3>Exploração</h3>
 <p>Visão estrutural:</p>
@@ -235,7 +227,7 @@ pre code {
 <div id="pib-per-capta" class="section level2">
 <h2>PIB per capta</h2>
 <p>Dataset WBD PIB per capta em xls.</p>
-<pre class="r"><code>pib &lt;- read_excel(&#39;C:/Users/curie/Desktop/wbd_income.xls&#39;)</code></pre>
+<pre class="r"><code>pib &lt;- read_excel(&#39;D:/datasets/wbd_income.xls&#39;)</code></pre>
 <div id="exploração-1" class="section level3">
 <h3>Exploração</h3>
 <p>Visão estrutural:</p>

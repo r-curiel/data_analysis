@@ -1,0 +1,132 @@
+---
+title: "Distribuição do IDH nos Municípios de São Paulo"
+author: "Rafael Vinicius Curiel"
+date: "21/01/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("rgdal","raster","tmap","maptools","tidyverse","broom","knitr",
+             "kableExtra","RColorBrewer")
+sapply(pacotes, require, character = T) 
+```
+
+
+
+## Estado de São Paulo
+
+Shapefile do Estado
+```{r message=FALSE, warning=FALSE}
+shape_sp <- readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
+```
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+summary(shape_sp)
+```
+
+
+Visualização da base de dados:
+```{r}
+head(shape_sp)
+tail(shape_sp)
+```
+
+
+Plotagem preliminar/exploratória:
+```{r warning=FALSE}
+plot(shape_sp)
+```
+
+
+
+### Manipulação
+
+Inclusão da variável de área dos Municípios:
+```{r}
+shape_sp@data["area_aprox"] <- area(shape_sp) / 1000000
+head(shape_sp)
+```
+
+
+Complemento com dados externos:
+```{r}
+load("D:/datasets/dados_sp.RData")
+head(dados_sp)
+```
+
+
+União shapefile com dados complementares:
+```{r}
+shape_sp <- merge(x = shape_sp, y = dados_sp, by.x = "CD_GEOCMU", by.y = "codigo")
+head(shape_sp)
+```
+
+
+Plotagem preliminar da variável IDH
+```{r message=FALSE, warning=FALSE}
+shape_sp@data %>% 
+  ggplot() +
+  geom_histogram(aes(x = idh),
+                 fill = "deepskyblue4",
+                 color = "white") +
+  labs(x = "IDH",
+       y = "Frequência") +
+  theme_bw()
+```
+
+
+
+### Visualização Espacial - ggplot
+
+Criação de um DataFrame para protagem:
+```{r}
+shape_sp_df <- tidy(shape_sp, region = "CD_GEOCMU") %>% 
+  rename(CD_GEOCMU = id) %>% 
+  left_join(shape_sp@data,
+            by = "CD_GEOCMU")
+head(shape_sp_df)
+```
+
+
+Plotagem ggplot:
+```{r message=FALSE, warning=FALSE}
+shape_sp_df %>% 
+  ggplot() +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = idh),
+               color = "black") +
+  labs(x = "Longitude",
+       y = "Latitude",
+       color = "IDH") +
+  theme_bw()
+```
+
+
+### Visualização Espacial - tmap
+
+Platagem tmap:
+```{r message=FALSE, warning=FALSE}
+tm_shape(shp = shape_sp) + 
+  tm_fill(col = "idh", 
+          style = "quantile", 
+          n = 4, 
+          palette = "Blues", 
+          legend.hist = TRUE) +
+  tm_layout(legend.text.size = 0.7,
+            legend.title.size = 0.9,
+            legend.hist.size = 0.5,
+            legend.hist.height = 0.2,
+            legend.hist.width = 0.3,
+            frame = F,
+            main.title = "Distribuição do IDH nos Municípios de SP") +
+  tm_borders(alpha = 0.8) +
+  tm_compass(type = "8star", 
+             show.labels = 3)
+```
