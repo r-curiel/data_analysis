@@ -92,20 +92,26 @@ shape_sp_df <- tidy(shape_sp, region = "CD_GEOCMU") %>%
   rename(CD_GEOCMU = id) %>% 
   left_join(shape_sp@data,
             by = "CD_GEOCMU")
+
+shape_sp_df <- shape_sp_df %>% rename(Municp=NM_MUNICIP,
+                                      IDH=idh)
+
 head(shape_sp_df)
 ```
 
 
 Plotagem ggplot:
 ```{r message=FALSE, warning=FALSE}
-shape_sp_df %>% 
-  ggplot() +
-  geom_polygon(aes(x = long, y = lat, group = group, fill = idh),
-               color = "black") +
-  labs(x = "Longitude",
-       y = "Latitude",
-       color = "IDH") +
-  theme_bw()
+plotly::ggplotly(
+  shape_sp_df %>% 
+    ggplot() +
+    geom_polygon(aes(x = long, y = lat, group = group, subgroup = Municp, fill = IDH),
+                 color = "black") +
+    labs(x = "Longitude",
+         y = "Latitude",
+         color = "IDH") +
+    theme_bw()
+)
 ```
 
 

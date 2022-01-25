@@ -1,0 +1,89 @@
+---
+title: "Visualização da altitude do litoral de São Paulo"
+author: "Rafael Vinicius Curiel"
+date: "22/01/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","raster","tmap","rgdal","rayshader","profvis")
+sapply(pacotes, require, character = T) 
+```
+
+
+
+## Carregamento do objeto
+
+Raster do litoral de São Paulo
+```{r message=FALSE, warning=FALSE}
+rlv_sp <- raster("D:/datasets/raster_sp/relevo_sp.tif")
+```
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+rlv_sp
+```
+
+
+Criação de um dataframe a partir do raster:
+```{r}
+rlv_sp_df <- as.data.frame(rlv_sp, xy = TRUE)
+```
+
+
+Visualização preliminar da concentração dos dados (histograma):
+```{r warning=FALSE}
+rlv_sp_df %>% 
+  ggplot() +
+  geom_histogram(aes(x = relevo_sp),
+                 fill = "deepskyblue4",
+                 color = "white") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(x = "Altitudes das Formações Geográficas",
+       y = "Frequência") +
+  theme_bw()
+```
+
+
+Visualização preliminar da imagem:
+```{r warning=FALSE}
+image(rlv_sp)
+```
+
+
+### Manipulação
+
+Carregamento de objeto: dados complementares São Paulo
+```{r message=FALSE, warning=FALSE}
+shp_sp <- readOGR("D:/datasets/shapefile_sp", "estado_sp")
+```
+
+
+Visualização gráfica preliminar da base de São Paulo:
+```{r}
+tm_shape(shp = shp_sp) + 
+  tm_borders()
+```
+
+
+
+### Visualização
+
+Visualização combinada de raster com shapefile
+```{r message=FALSE, warning=FALSE}
+tm_shape(shp = rlv_sp) + 
+  tm_raster(style = "quantile", 
+            n = 5,
+            palette = "viridis") +
+  tm_shape(shp = shp_sp) + 
+  tm_borders() + 
+  tm_layout(legend.position = c("left", "bottom"), 
+            legend.outside = TRUE)
+```

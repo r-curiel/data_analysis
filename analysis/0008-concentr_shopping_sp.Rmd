@@ -1,0 +1,153 @@
+---
+title: "Concetração de shoppings no Município de São Paulo"
+author: "Rafael Vinicius Curiel"
+date: "25/01/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","sf","tmap","rgdal","rgeos","adehabitatHR","knitr","kableExtra")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+load("D:/datasets/shoppings.RData")
+```
+
+
+
+### Exploração
+
+Visão estrutural:
+```{r}
+shoppings %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = "striped", 
+                full_width = TRUE, 
+                font_size = 12)
+```
+
+
+Criação de um siplefeature a partir do dataset - georreferenciamento:
+```{r}
+sf_shoppings <- st_as_sf(x = shoppings, 
+                         coords = c("longitude", "latitude"), 
+                         crs = 4326)
+```
+
+
+Habilitação para visualização dinâmica:
+```{r}
+tmap_mode("view")
+```
+
+
+
+Visualização gráfica preliminar:
+```{r warning=FALSE}
+tm_shape(shp = sf_shoppings) + 
+  tm_dots(size = 1)
+```
+
+
+Visualização do Coordinate Reference System:
+```{r warning=FALSE}
+attr(sf_shoppings$geometry, which = "crs")
+```
+
+
+Visualização das dimensões do objeto:
+```{r}
+attr(sf_shoppings$geometry, which = "bbox")
+```
+
+
+Visualização interativa do georreferenciamento:
+```{r}
+tm_shape(shp = sf_shoppings) + 
+  tm_dots(col = "deepskyblue4", 
+          border.col = "black", 
+          size = 0.2, 
+          alpha = 0.8)
+```
+
+
+
+### Manipulação - Regiões
+
+Carregamento de objeto: dados complementares do município de São Paulo:
+```{r message=FALSE, warning=FALSE}
+shp_sp <- readOGR("D:/datasets/shapefile_municipio", "municipio_sp")
+```
+
+
+Visualização combinada dos objetos - Por região:
+```{r}
+tm_shape(shp = shp_sp) + 
+  tm_borders(alpha = 0.5) +
+  tm_shape(shp = sf_shoppings) + 
+  tm_dots(col = "regiao", 
+          size = 0.2)
+```
+
+
+
+### Manipulação - Área de abrangência
+
+Isolamento das coordenadas:
+```{r}
+coordenadas_shoppings <- cbind(shoppings$longitude,
+                               shoppings$latitude)
+```
+
+
+Conversão da base de dados em spatialpoints:
+```{r}
+sp_shp <- SpatialPoints(coords = coordenadas_shoppings,
+                              proj4string = CRS("+proj=longlat"))
+```
+
+
+Orientação a partir de distância eoclidiana:
+```{r}
+shoppings_UTM <- spTransform(x = sp_shp,
+                             CRSobj = CRS("+init=epsg:22523"))
+```
+
+
+Delimitação do raio de abrangência (1,5km):
+```{r}
+buffer_shoppings <- gBuffer(spgeom = shoppings_UTM, 
+                            width = 1500, 
+                            byid = TRUE)
+```
+
+
+Visualização gráfica preliminar:
+```{r}
+tm_shape(shp = buffer_shoppings) + 
+  tm_borders()
+```
+
+
+
+### Visualização
+
+Apresentação dos objetos combinados (georreferenciamento, agrupamento e buffering):
+```{r}
+tm_shape(shp = shp_sp) + 
+  tm_borders(alpha = 0.5) +
+  tm_shape(shp = sf_shoppings) + 
+  tm_dots(col = "regiao", 
+          size = 0.02) +
+  tm_shape(buffer_shoppings) + 
+  tm_borders(col = "black") 
+```
+
