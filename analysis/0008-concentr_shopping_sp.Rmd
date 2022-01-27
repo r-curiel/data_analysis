@@ -43,13 +43,6 @@ sf_shoppings <- st_as_sf(x = shoppings,
 ```
 
 
-Habilitação para visualização dinâmica:
-```{r}
-tmap_mode("view")
-```
-
-
-
 Visualização gráfica preliminar:
 ```{r warning=FALSE}
 tm_shape(shp = sf_shoppings) + 
@@ -149,5 +142,77 @@ tm_shape(shp = shp_sp) +
           size = 0.02) +
   tm_shape(buffer_shoppings) + 
   tm_borders(col = "black") 
+```
+
+
+
+### União da área de abrangência
+
+União da área de abrangência de cada localização: 
+```{r}
+buffer_union <- gUnaryUnion(spgeom = buffer_shoppings)
+
+
+tm_shape(shp = shp_sp) + 
+  tm_borders(alpha = 0.5) +
+  tm_shape(shp = sf_shoppings) + 
+  tm_dots(col = "regiao", 
+          size = 0.2) +
+  tm_shape(shp = buffer_union) + 
+  tm_borders(col = "black") + 
+  tm_fill(col = "gray",
+          alpha = 0.5)
+```
+
+
+
+### Densidade e Concentração
+
+Criação de um objeto com spatial points + base de dados atrelada:
+```{r}
+shoppings_sp_df <- SpatialPointsDataFrame(data = shoppings,
+                                          coords = coordenadas_shoppings,
+                                          proj4string = CRS("+proj=longlat"))
+```
+
+
+Criação da camada de densidade e visualização gráfica preliminar:
+```{r message=FALSE, warning=FALSE}
+shoppings_dens <- kernelUD(xy = shoppings_sp_df,
+                           h = "href",
+                           grid = 1000,
+                           boundary = NULL)
+plot(shoppings_dens)
+```
+
+
+Definição das zonas de densidade:
+```{r}
+zona1 <- getverticeshr(x = shoppings_dens, percent = 20) 
+zona2 <- getverticeshr(x = shoppings_dens, percent = 40) 
+zona3 <- getverticeshr(x = shoppings_dens, percent = 60) 
+zona4 <- getverticeshr(x = shoppings_dens, percent = 80)
+```
+
+
+### Visualização com densidade:
+```{r}
+tm_shape(shp = shp_sp) + 
+  tm_fill(col = "gray90") + 
+  tm_borders(col = "white", alpha = 0.5) + 
+  tm_shape(shp = shoppings_sp_df) + 
+  tm_dots(col = "regiao", size = 0.25) + 
+  tm_shape(zona1) + 
+  tm_borders(col = "firebrick4", lwd = 2.5) +
+  tm_fill(alpha = 0.4, col = "firebrick4") + 
+  tm_shape(zona2) + 
+  tm_borders(col = "firebrick3", lwd = 2.5) + 
+  tm_fill(alpha = 0.3, col = "firebrick3") + 
+  tm_shape(zona3) + 
+  tm_borders(col = "firebrick2", lwd = 2.5) + 
+  tm_fill(alpha = 0.2, col = "firebrick2") +
+  tm_shape(zona4) + 
+  tm_borders(col = "firebrick1", lwd = 2.5) + 
+  tm_fill(alpha = 0.1, col = "firebrick1")
 ```
 
