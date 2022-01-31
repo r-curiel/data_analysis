@@ -9,7 +9,7 @@ output: html_document
 
 Carregamento dos pacotes  
 ```{r message=FALSE, warning=FALSE}
-pacotes <- c("rgdal","plotly","tidyverse","knitr","kableExtra","gridExtra",
+pacotes <- c("rgdal","tidyverse","knitr","kableExtra","gridExtra",
              "png","grid","magick","rgl","devtools","GISTools","rayshader",
              "tmap","broom", "sp")
 sapply(pacotes, require, character = T) 
@@ -59,7 +59,7 @@ shp_centro_oeste_df <- tidy(shp_centro_oeste, region = "CD_GEOCODM") %>%
 ```
 
 
-Plotagem interativa para visualização dos municípios
+Visualização gráfica preliminar:
 ```{r}
 shp_centro_oeste_df %>% 
     ggplot() +

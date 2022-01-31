@@ -62,7 +62,7 @@ attr(sf_shoppings$geometry, which = "bbox")
 ```
 
 
-Visualização interativa do georreferenciamento:
+Visualização do georreferenciamento:
 ```{r}
 tm_shape(shp = sf_shoppings) + 
   tm_dots(col = "deepskyblue4", 
