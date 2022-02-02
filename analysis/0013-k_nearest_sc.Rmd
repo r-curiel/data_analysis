@@ -1,0 +1,63 @@
+---
+title: "Visualização geográfica por critério k-Nearest no estado de Santa Catarina"
+author: "Rafael Vinicius Curiel"
+date: "01/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_sc <- readOGR(dsn = "D:\\datasets\\shapefile_sc", 
+                  layer = "sc_state",
+                  encoding = "UTF-8", 
+                  use_iconv = TRUE)
+```
+
+
+
+### Exploração
+
+Vizinhança por knearneigh:
+```{r}
+lista_knear <- knearneigh(coordinates(shp_sc), 
+                          longlat = TRUE, 
+                          k = 3)
+nb_knear <- knn2nb(knn = lista_knear)
+```
+
+
+Visualização estrutural:
+```{r}
+nb_knear
+```
+
+
+Visualização do critério estabelecido:
+```{r}
+plot(shp_sc, border = "lightgray")
+plot(nb_knear, 
+     coordinates(shp_sc), 
+     add = TRUE, 
+     col = "#13306DFF")
+```
+
+
+Criação de matriz W:
+```{r}
+matrizW_knear  <- nb2mat(neighbours = nb_knear,
+                         style = "B")
+colnames(matrizW_knear) <- shp_sc@data$NM_MUNICIP
+rownames(matrizW_knear) <- shp_sc@data$NM_MUNICIP
+```
+

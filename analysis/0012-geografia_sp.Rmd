@@ -1,0 +1,64 @@
+---
+title: "Visualização geográfica por critério geográrfico no estado da Bahia"
+author: "Rafael Vinicius Curiel"
+date: "01/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_ba <- readOGR(dsn = "D:\\datasets\\shapefile_ba", 
+                  layer = "ba_state",
+                  encoding = "UTF-8", 
+                  use_iconv = TRUE)
+```
+
+
+
+### Exploração
+
+Vizinhança por distância (km):
+```{r}
+nb_distan <- dnearneigh(coordinates(shp_ba), 
+                                  d1 = 0, 
+                                  d2 = 90, 
+                                  longlat = TRUE)
+```
+
+
+Visualização estrutural:
+```{r}
+summary(nb_distan)
+```
+
+
+Visualização do critério estabelecido:
+```{r}
+plot(shp_ba, border = "lightgray")
+plot(nb_distan, 
+       coordinates(shp_ba), 
+       add = TRUE, 
+       col = "#CC6A70FF")
+```
+
+
+Criação de matriz W:
+```{r}
+matrizW_distancias <- nb2mat(neighbours = nb_distan,
+                             style = "B")
+colnames(matrizW_distancias) <- shp_ba@data$MUNICIPIO
+rownames(matrizW_distancias) <- shp_ba@data$MUNICIPIO
+
+```
+

@@ -1,0 +1,104 @@
+---
+title: "Visualização geográfica por critério de contiguidade no estado de São Paulo"
+author: "Rafael Vinicius Curiel"
+date: "01/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_sp <- readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
+```
+
+
+
+### Exploração
+
+Visualização gráfica preliminar:
+```{r}
+plot(shp_sp)
+```
+
+
+### Manipulação
+
+## Queen
+
+Vizinhança por contiguidade:
+```{r}
+nb_queen <- poly2nb(pl = shp_sp,
+                          queen = TRUE,
+                          row.names = shp_sp@data$NM_MUNICIP)
+```
+
+
+Visualização estrutural:
+```{r}
+summary(nb_queen)
+```
+
+
+
+Visualização do critério estabelecido:
+```{r}
+plot(shp_sp, border = "lightgray")
+plot(nb_queen, 
+     coordinates(shp_sp), 
+     add = TRUE, 
+     col = "#33638DFF")
+```
+
+
+Criação de matriz W com tratamento para a ilha:
+```{r}
+matrizW_queen <- nb2mat(neighbours = nb_queen,
+                        style = "B",
+                        zero.policy = TRUE)
+colnames(matrizW_queen) <- shp_sp@data$NM_MUNICIP
+```
+
+
+## Rook
+
+Vizinhança por contiguidade:
+```{r}
+nb_rook <- poly2nb(pl = shp_sp,
+                         queen = FALSE,
+                         row.names = shp_sp@data$NM_MUNICIP)
+```
+
+
+Visualização estrutural:
+```{r}
+summary(nb_rook)
+```
+
+
+Visualização do critério estabelecido:
+```{r}
+plot(shp_sp, border = "lightgray")
+plot(nb_rook, 
+     coordinates(shp_sp), 
+     add = TRUE, 
+     col = "#33638DFF")
+```
+
+
+Criação de matriz W com tratamento para a ilha:
+```{r}
+matrizW_rook <- nb2mat(neighbours = nb_rook,
+                        style = "B",
+                        zero.policy = TRUE)
+colnames(matrizW_queen) <- shp_sp@data$NM_MUNICIP
+```
