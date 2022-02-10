@@ -1,0 +1,85 @@
+---
+title: "Padronização de Matrizes Espaciais"
+author: "Rafael Vinicius Curiel"
+date: "10/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_sp <- readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
+```
+
+
+
+### Manipulação
+
+Estabelecimento do critério de vizinhança:
+```{r}
+nb_queen <- poly2nb(pl = shp_sp,
+                          queen = TRUE,
+                          row.names = shp_sp@data$NM_MUNICIP)
+```
+
+
+Visualização gráfica preliminar:
+```{r}
+plot(shp_sp, border = "lightgray")
+plot(nb_queen, 
+     coordinates(shp_sp), 
+     add = TRUE, 
+     col = "#33638DFF")
+```
+
+
+
+### Matrizes de ponderação
+
+#### Matriz W com colunas renomeadas:
+(Matriz binária de pesos espaciais)
+```{r}
+w_matrix_queen <- nb2mat(neighbours = nb_queen,
+                        style = "B",
+                        zero.policy = TRUE) # (desconsidera ilha)
+colnames(w_matrix_queen) <- shp_sp@data$NM_MUNICIP
+```
+
+
+#### Matriz W padronizada em linha:
+(Matriz com somatório dos pesos = 1 dividido pelo número de vizinhos)
+```{r}
+w_matrix_queen_linha <- nb2mat(nb_queen,
+                              style = "W",
+                              zero.policy = TRUE)
+colnames(w_matrix_queen_linha) <- shp_sp@data$NM_MUNICIP
+```
+
+
+#### Matriz W duplamente padronizada:
+(Matriz estocástica, em que o somatório de todos pesos = 1)
+```{r}
+w_matrix_queen_dupla_padr <- nb2mat(nb_queen,
+                                   style = "U",
+                                   zero.policy = TRUE)
+colnames(w_matrix_queen_dupla_padr) <- shp_sp@data$NM_MUNICIP
+```
+
+
+#### Matriz W pela estabilização da variância:
+```{r}
+w_matrix_queen_est_var <- nb2mat(nb_queen,
+                                style = "S",
+                                zero.policy = TRUE)
+colnames(w_matrix_queen_est_var) <- shp_sp@data$NM_MUNICIP
+```

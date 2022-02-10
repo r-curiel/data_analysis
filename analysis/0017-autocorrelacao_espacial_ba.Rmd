@@ -1,0 +1,86 @@
+---
+title: "Técnicas para Verificação da Autocorrelação Espacial (cont)"
+author: "Rafael Vinicius Curiel"
+date: "10/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_ba <- readOGR(dsn = "D:/datasets/shapefile_ba", layer = "ba_state", encoding = "UTF-8", use_iconv = TRUE)
+load("D:/datasets/dados_ba.RData")
+```
+
+
+
+### Manipulação
+
+União das bases de dados
+```{r}
+shp_ba@data %>% 
+  left_join(dados_ba, by = "Codigo") ->shp_ba@data
+```
+
+
+Estabelecimento do critério de vizinhança (distância geográfica):
+```{r}
+nb_distan <- dnearneigh(coordinates(shp_ba), d1 = 0, d2 = 90, longlat = TRUE)
+```
+
+
+Matriz W:
+```{r}
+w_matrix_distan <- nb2mat(neighbours = nb_distan, style = "B")
+colnames(w_matrix_distan) <- shp_ba@data$MUNICIPIO
+rownames(w_matrix_distan) <- shp_ba@data$MUNICIPIO
+```
+
+
+Alteração do tipo do objeto (de Matrizw para Listw):
+```{r}
+w_list_distan <- mat2listw(x = w_matrix_distan)
+```
+
+
+### Análise
+
+Estatística G de Getis e Ord:
+```{r}
+g_local <- localG(x = shp_ba@data$idh, listw = w_list_distan)
+```
+
+
+União do objeto g_local ao shapefile:
+```{r}
+mapa_G <- cbind(shp_ba, as.matrix(g_local)) 
+
+mapa_G@data %>% 
+  rename(estistica_g = 4) -> mapa_G@data
+
+head(mapa_G@data)
+```
+
+
+### Visualização
+
+```{r}
+mapa_G@data <- mapa_G@data %>% 
+  mutate(faixa_quantis = factor(quantcut(x = estistica_g, q = 8))) 
+
+tm_shape(mapa_G) + 
+  tm_fill("faixa_quantis", 
+          palette = "-RdBu") + 
+  tm_borders()
+```
+

@@ -1,0 +1,207 @@
+---
+title: "Técnicas para Verificação da Autocorrelação Espacial"
+author: "Rafael Vinicius Curiel"
+date: "10/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_sp <- readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
+load("D:/datasets/dados_sp.RData")
+```
+
+
+
+### Manipulação
+
+União das bases de dados
+```{r}
+shp_sp@data %>% 
+  rename(codigo = 2) %>% 
+  mutate(codigo = as.numeric(codigo)) %>% 
+  left_join(dados_sp, by = "codigo") -> shp_sp@data
+head(shp_sp@data, 3)
+```
+
+
+Estabelecimento do critério de vizinhança:
+```{r}
+nb_queen <- poly2nb(pl = shp_sp,
+                          queen = TRUE,
+                          row.names = shp_sp@data$NM_MUNICIP)
+```
+
+
+Matriz W:
+```{r}
+w_matrix_queen <- nb2mat(neighbours = nb_queen,
+                        style = "B",
+                        zero.policy = TRUE) # (desconsidera ilha)
+colnames(w_matrix_queen) <- shp_sp@data$NM_MUNICIP
+```
+
+
+Matriz W para Lista
+```{r}
+w_list_queen <- mat2listw(w_matrix_queen)
+```
+
+
+
+### Visualização
+
+Visualização gráfica preliminar da distribuição do IDH
+```{r}
+tm_shape(shp = shp_sp) +
+  tm_fill(col = "idh", style = "quantile", n = 5, palette = "Blues") +
+  tm_borders()
+```
+
+
+
+## Autocorrelação Espacial
+(Verifica se existe a autocorrelação espacial envolvendo o fenômeno estudado.)
+
+
+### Autocorrelação Global - Estatística I de Moran:
+
+```{r}
+moran.test(x = shp_sp@data$idh, 
+           listw = w_list_queen, 
+           zero.policy = TRUE)
+```
+Observado Autocorrelação do tipo positiva (I de Moran > Esperado)
+Revela que: observações com alto IDH estão próximas outras observações com alto IDH.
+            O mesmo ocorre para observações com baixo IDH.
+
+
+Diagrama:
+```{r}
+moran.plot(x = shp_sp@data$idh, 
+           listw = w_list_queen, 
+           zero.policy = TRUE,
+           xlab = "IDH", 
+           ylab = "IDH Espacialmente Defasado",
+           pch = 19)
+```
+
+
+### Autocorrelação Local de Moran:
+
+Padronização em linha:
+```{r}
+w_matrix_queen_linha <- nb2mat(nb_queen,
+                              style = "W",
+                              zero.policy = TRUE)
+
+list_w_queen <- mat2listw(w_matrix_queen_linha)
+```
+
+
+Criação da Moran Local:
+```{r}
+moran_local <- localmoran(x = shp_sp@data$idh, 
+                          listw = list_w_queen, 
+                          zero.policy = TRUE)
+
+moran_local_map <- cbind(shp_sp, moran_local)
+```
+
+
+Visualização Espacial:
+```{r}
+# Ajustes da legenda:
+quantile(moran_local_map@data$Ii, type = 5, probs = c(0,0.2,0.4,0.6,0.8))
+
+moran_local_map@data <- moran_local_map@data %>% 
+  mutate(faixa_quantis = factor(quantcut(x = Ii, q = 5))) 
+
+# Visualização
+tm_shape(shp = moran_local_map) +
+  tm_fill(col = "faixa_quantis", palette = "Blues") +
+  tm_borders()
+```
+
+
+Plotagem demonstrando os quadrantes:
+```{r}
+moran_local_map <- cbind(moran_local_map, 
+                          attr(x = moran_local, which = "quadr")[1])
+
+tm_shape(shp = moran_local_map) +
+  tm_fill(col = "mean", palette = "Blues") +
+  tm_borders(col = "gray")
+```
+
+
+### Clusterização LISA - Local Indicators of Spatial Association:
+(Iidentifica padrões locais de associação espacial)
+
+Geração dos quadrantes:
+```{r}
+quadrantes <- vector(mode = "numeric", length = nrow(moran_local))
+```
+
+
+Centro dos valores do IDH ao redor da média:
+```{r}
+centro_idh <- shp_sp@data$idh - mean(shp_sp@data$idh)
+```
+
+
+Centro dos valores da Moran Local ao redor da média:
+```{r}
+centro_moran_local <- moran_local[,1] - mean(moran_local[,1])
+```
+
+
+Significância a ser adotada:
+```{r}
+sig <- 0.05
+```
+
+
+Enquadramento das observações:
+```{r}
+quadrantes[centro_idh > 0 & centro_moran_local > 0] <- "HH"
+quadrantes[centro_idh > 0 & centro_moran_local < 0] <- "HL"
+quadrantes[centro_idh < 0 & centro_moran_local > 0] <- "LH"
+quadrantes[centro_idh < 0 & centro_moran_local < 0] <- "LL"
+```
+
+
+Eliminação das observações sem significância estatística:
+```{r}
+quadrantes[moran_local[,5] > sig] <- "Estatisticamente_não_significante"
+```
+
+
+União dos objetos:
+```{r}
+moran_local_map@data["quadrantes"] <- factor(quadrantes)
+```
+
+
+Visualização gráfica:
+```{r}
+tm_shape(shp = moran_local_map) +
+  tm_polygons(col = "quadrantes", 
+              pal = c(HH = "darkred",
+                      HL = "red", 
+                      LH = "lightblue", 
+                      LL = "darkblue",
+                      Estatisticamente_não_significante = "white")) +
+  tm_borders()
+```
