@@ -1,0 +1,332 @@
+---
+title: "Vulnerabilidade a Pobreza no Centro-Oeste do Brasil"
+author: "Rafael Vinicius Curiel"
+date: "11/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("plotly","tidyverse","rgdal","spdep","knitr","kableExtra","tmap",
+             "gtools","grid","knitr","kableExtra")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados
+```{r message=FALSE, warning=FALSE}
+shp_co <- readOGR(dsn = "D:/datasets/shapefile_centrooeste", layer = "centrooeste_shapefile",
+                  encoding = "UTF-8", 
+                  use_iconv = TRUE)
+load("D:/datasets/dados_centro_oeste.RData")
+```
+
+
+
+### Prévia
+
+Visualização estrutural preliminar do shapefile:
+```{r}
+head(shp_co@data)
+```
+
+
+Visualização estrutural preliminar dos dados complementares:
+```{r}
+head(dados_centro_oeste)
+```
+
+
+
+## Manipulação
+
+União das bases de dados
+```{r}
+shp_co@data %>% 
+  left_join(dados_centro_oeste, by = "CD_GEOCODM") -> shp_co@data
+head(shp_co@data)
+```
+
+
+Visualização gráfica preliminar da distribuição dos centróides:
+```{r}
+tm_shape(shp = shp_co) +
+  tm_dots(col = "#39568CFF", size = 0.08)
+```
+
+
+Estabelecimento do critério de vizinhança:
+```{r eval=FALSE, include=FALSE}
+nb_queen <- poly2nb(pl = shp_co,
+                          queen = TRUE,
+                          row.names = shp_co@data$NM_MUNICIP)
+```
+
+
+Verificação de observações duplicadas:
+```{r}
+shp_co@data$NM_MUNICIP[duplicated(shp_co@data$NM_MUNICIP)]
+```
+
+
+
+Filtro para visualização das observações duplicadas
+```{r}
+shp_co@data %>% 
+  filter(NM_MUNICIP == "MUNDO NOVO")
+```
+
+
+Ajuste para eliniação das observações duplicadas:
+```{r}
+shp_co@data %>% 
+  mutate(city = paste(NM_MUNICIP, state)) -> shp_co@data
+
+```
+
+
+
+Estabelecimento do critério de vizinhança:
+```{r}
+nb_queen <- poly2nb(pl = shp_co,
+                          queen = TRUE,
+                          row.names = shp_co@data$city)
+```
+
+
+Resumo estatístico:
+```{r}
+summary(nb_queen)
+```
+
+
+Visualização gráfica preliminar:
+```{r}
+plot.new()
+plot(shp_co, border = "lightgray")
+plot(nb_queen, 
+     coordinates(shp_co), 
+     add = TRUE, 
+     col = "#FDE725FF")
+```
+
+
+Matriz W:
+```{r}
+w_matrix_queen_linha <- nb2mat(nb_queen,
+                              style = "W")
+colnames(w_matrix_queen_linha) <- rownames(w_matrix_queen_linha)
+```
+
+
+Visualização gráfica:
+```{r}
+pov_plot <- tm_shape(shp = shp_co) +
+  tm_fill(col = "poverty", 
+          style = "quantile", 
+          n = 5, 
+          palette = "plasma",
+          legend.hist = TRUE) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)
+pov_plot
+```
+
+
+### Autocorrelação Global - I de Moran
+
+Padronização em linha:
+```{r}
+w_list_queen <- mat2listw(w_matrix_queen_linha)
+```
+
+
+I de Moran:
+```{r}
+moran.test(x = shp_co@data$poverty, 
+           listw = w_list_queen)
+```
+A análise permite concluir:
+1 - Há autocorrelação espacial global positiva
+2 - Há similaridade entre os municípios
+3 - Geração de hotspots e coldspots (HH e LL)
+
+
+Diagrama:
+```{r}
+moran.plot(x = shp_co@data$poverty, 
+           listw = w_list_queen, 
+           zero.policy = TRUE,
+           xlab = "Poverty", 
+           ylab = "Spatially lagged poverty",
+           pch = 19)
+```
+
+
+### Autocorrelação Local de Moran
+
+Criação da Moran Local:
+```{r}
+moran_local <- localmoran(x = shp_co@data$poverty, 
+                          listw = w_list_queen)
+
+moran_local_map <- cbind(shp_co, moran_local)
+```
+
+
+Visualização Espacial:
+```{r}
+# Ajustes da legenda:
+moran_local_map@data <- moran_local_map@data %>% 
+  mutate(faixa_quantis = factor(quantcut(x = Ii, q = 5))) 
+
+# Visualização
+moran_local_plot <- tm_shape(shp = moran_local_map) +
+  tm_fill(col = "faixa_quantis", 
+          palette = "plasma") +
+  tm_borders() +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)
+
+moran_local_plot
+```
+
+
+Plotagem de comparação:
+```{r message=FALSE, warning=FALSE}
+plot.new()
+pushViewport(
+  viewport(
+    layout = grid.layout(1,2)
+  )
+)
+print(pov_plot, vp = viewport(layout.pos.col = 1, height = 5))
+print(moran_local_plot, vp = viewport(layout.pos.col = 2, height = 5))
+```
+
+
+Plotagem com rótulos por faixa:
+```{r}
+moran_local_map <- cbind(moran_local_map, 
+                          attr(x = moran_local, which = "quadr")[1])
+
+tm_shape(shp = moran_local_map) +
+  tm_fill(col = "mean", palette = "plasma") +
+  tm_borders(col = "gray")
+```
+
+
+### Clusterização LISA - Local Indicators of Spatial Association:
+
+```{r}
+quadrantes <- vector(mode = "numeric", length = nrow(moran_local))
+```
+
+
+Centro dos valores do IDH ao redor da média:
+```{r}
+centro_pov <- shp_co@data$poverty - mean(shp_co@data$poverty)
+```
+
+
+Centro dos valores da Moran Local ao redor da média:
+```{r}
+centro_moran_local <- moran_local[,1] - mean(moran_local[,1])
+```
+
+
+Significância a ser adotada:
+```{r}
+sig <- 0.05
+```
+
+
+Enquadramento das observações:
+```{r}
+quadrantes[centro_pov > 0 & centro_moran_local > 0] <- "HH"
+quadrantes[centro_pov > 0 & centro_moran_local < 0] <- "HL"
+quadrantes[centro_pov < 0 & centro_moran_local > 0] <- "LH"
+quadrantes[centro_pov < 0 & centro_moran_local < 0] <- "LL"
+```
+
+
+Eliminação das observações sem significância estatística:
+```{r}
+quadrantes[moran_local[,5] > sig] <- "Estatisticamente_não_significante"
+```
+
+
+União dos objetos:
+```{r}
+moran_local_map@data["quadrantes"] <- factor(quadrantes)
+```
+
+
+Visualização gráfica:
+```{r}
+tm_shape(shp = moran_local_map) +
+  tm_polygons(col = "quadrantes", 
+              pal = c(HH = "#FDE725FF",
+                      HL = "#7AD151FF", 
+                      LH = "#2A788EFF", 
+                      LL = "#440154FF",
+                      Estatisticamente_não_significante = "white")) +
+  tm_borders() +
+  tm_layout(legend.outside = TRUE)
+```
+
+
+
+### Autocorrelação Local - Estatística G de Getis e Ord
+
+Estabelecimento do critério de vizinhança (distância geográfica) de 150km:
+```{r}
+nb_distan <- dnearneigh(coordinates(shp_co), d1 = 0, d2 = 150, longlat = TRUE)
+```
+
+
+Matriz W:
+```{r}
+w_matrix_distan <- nb2mat(neighbours = nb_distan, style = "B")
+colnames(w_matrix_distan) <- shp_co@data$MUNICIPIO
+rownames(w_matrix_distan) <- shp_co@data$MUNICIPIO
+```
+
+
+Alteração do tipo do objeto (de Matrizw para Listw):
+```{r}
+w_list_distan <- mat2listw(x = w_matrix_distan)
+```
+
+
+Estatística G de Getis e Ord:
+```{r}
+g_local <- localG(x = shp_co@data$poverty, listw = w_list_distan)
+```
+
+
+União do objeto g_local ao shapefile:
+```{r}
+mapa_G <- cbind(shp_co, as.matrix(g_local)) 
+
+mapa_G@data %>% 
+  rename(estistica_g = 7) -> mapa_G@data
+
+head(mapa_G@data)
+```
+
+
+Visualização gráfica:
+```{r}
+mapa_G@data <- mapa_G@data %>% 
+  mutate(faixa_quantis = factor(quantcut(x = estistica_g, q = 6))) 
+
+tm_shape(mapa_G) + 
+  tm_fill("faixa_quantis", 
+          palette = "plasma") + 
+  tm_borders()
+```

@@ -33,7 +33,7 @@ shp_ba@data %>%
 ```
 
 
-Estabelecimento do critério de vizinhança (distância geográfica):
+Estabelecimento do critério de vizinhança (distância geográfica) de 90km:
 ```{r}
 nb_distan <- dnearneigh(coordinates(shp_ba), d1 = 0, d2 = 90, longlat = TRUE)
 ```
@@ -53,7 +53,7 @@ w_list_distan <- mat2listw(x = w_matrix_distan)
 ```
 
 
-### Análise
+### Autocorrelação Local - Estatística G de Getis e Ord
 
 Estatística G de Getis e Ord:
 ```{r}
