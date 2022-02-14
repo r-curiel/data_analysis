@@ -73,14 +73,12 @@ saude <- pivot_wider(saude,
 
 
 
-
 ## PIB per capta
 
 Dataset WBD PIB per capta em xls.
 ```{r}
 pib <- read_excel('D:/datasets/wbd_income.xls')
 ```
-
 
 
 
@@ -92,7 +90,6 @@ glimpse(pib)
 ```
 
 
-
 ### Limpeza
 
 Renomear colunas:
@@ -102,7 +99,6 @@ pib <- pib %>% rename(country=1,
                      income=3,
                      ano=4)
 ```
-
 
 
 

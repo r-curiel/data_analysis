@@ -18,7 +18,7 @@ library(readxl)
 
 Dataset movies
 ```{r}
-movies <- read.csv("D:/datasets/movies.csv")
+movies <- utils::read.csv("D:/datasets/movies.csv")
 ```
 
 
@@ -26,7 +26,7 @@ movies <- read.csv("D:/datasets/movies.csv")
 
 Dataset tvshow
 ```{r}
-tvshow <- read.csv("D:/datasets/tvshow.csv")
+tvshow <- utils::read.csv("D:/datasets/tvshow.csv")
 ```
 
 
@@ -35,13 +35,13 @@ tvshow <- read.csv("D:/datasets/tvshow.csv")
 
 Visão estrutural filmes:
 ```{r}
-glimpse(movies)
+dplyr::glimpse(movies)
 ```
 
 
 Visão estrutural séries:
 ```{r}
-glimpse(tvshow)
+dplyr::glimpse(tvshow)
 ```
 
 
@@ -49,24 +49,24 @@ glimpse(tvshow)
 
 União das bases de dados:
 ```{r}
-dataset <- movies %>% select(everything(), -(Directors:Runtime)) %>% 
-                       bind_rows(tvshow) %>% 
-                       select(!X)
+dataset <- movies %>% dplyr::select(everything(), -(Directors:Runtime)) %>% 
+                      dplyr::bind_rows(tvshow) %>% 
+                      dplyr::select(!X)
 ```
 
 
 Alteração dos tipos dos dados das variáveis IMDb e Rotten Tomatoes:
 ```{r}
-aj_imdb <- as.numeric(str_sub(dataset$IMDb, 1, 3))
-aj_rotten <- str_sub(dataset$Rotten.Tomatoes, 1, 3)
-aj_rotten <- gsub("/", "", aj_rotten)
+aj_imdb <- base::as.numeric(str_sub(dataset$IMDb, 1, 3))
+aj_rotten <- stringr::str_sub(dataset$Rotten.Tomatoes, 1, 3)
+aj_rotten <- base::gsub("/", "", aj_rotten)
 aj_rotten <- as.numeric(aj_rotten)
 ```
 
 
 Aplicação das alterações:
 ```{r}
-dataset <- dataset %>%  mutate(IMDB = aj_imdb,
+dataset <- dataset %>% dplyr::mutate(IMDB = aj_imdb,
                                  ROTTEN = aj_rotten)
 ```
 
@@ -79,12 +79,12 @@ Resumo descritivo aplicado às médias das notas do percentil 95:
 ```{r}
 dataset %>% mutate(Type = replace(Type, Type==1, "serie"), 
                     Type = replace(Type, Type==0, "filme"))  %>%
-  group_by(Type) %>%
-  summarise(media_IMDB=mean(IMDB, na.rm=T),
+  dplyr::group_by(Type) %>%
+  dplyr::summarise(media_IMDB=mean(IMDB, na.rm=T),
             media_ROTTEN=mean(ROTTEN, na.rm=T),
             p95_IMDB=quantile(IMDB, probs=0.95, type=5, na.rm=T),
             p95_ROTTEN=quantile(ROTTEN, probs=0.95, type=5, na.rm=T)) %>%
-  ungroup() %>% droplevels(.)
+  dplyr::ungroup() %>% base::droplevels(.)
 ```
 
 
@@ -93,34 +93,20 @@ dataset %>% mutate(Type = replace(Type, Type==1, "serie"),
 
 Seleção dos melhores filmes
 ```{r}
-best_movies <- dataset %>% filter(Type==0) %>% 
-  mutate(melhores_IMDb = cut(IMDB, 
-                            c(-Inf,
-                              quantile(IMDB, probs=0.95, type=5, na.rm=T),
-                              Inf),
-                            c(0,1)),
-         melhores_ROTTEN = cut(ROTTEN,
-                              c(-Inf,
-                                quantile(ROTTEN, probs=0.95, type=5, na.rm=T),
-                                Inf),
-                              c(0,1))) %>% 
-  filter(melhores_IMDb==1&melhores_ROTTEN==1)
+best_movies <- dataset %>% dplyr::filter(Type==0) %>% 
+  dplyr::mutate(melhores_IMDb = base::cut(IMDB, 
+                            c(-Inf, stats::quantile(IMDB, probs=0.95, type=5, na.rm=T), Inf), c(0,1)),
+                melhores_ROTTEN = cut(ROTTEN,
+                            c(-Inf, quantile(ROTTEN, probs=0.95, type=5, na.rm=T), Inf), c(0,1))) %>% 
+  dplyr::filter(melhores_IMDb==1&melhores_ROTTEN==1)
 ```
 
 
 Seleção das melhores séries
 ```{r}
 best_tvshow <- dataset %>% filter(Type==1) %>% 
-  mutate(melhores_IMDb = cut(IMDB, 
-                                 c(-Inf,
-                                 quantile(IMDB, probs=0.95, type=5, na.rm=T),
-                                 Inf),
-                                 c(0,1)),
-         melhores_ROTTEN = cut(ROTTEN,
-                                 c(-Inf,
-                                 quantile(ROTTEN, probs=0.95, type=5, na.rm=T),
-                                 Inf),
-                                 c(0,1))) %>% 
+  mutate(melhores_IMDb = cut(IMDB, c(-Inf, quantile(IMDB, probs=0.95, type=5, na.rm=T), Inf), c(0,1)),
+         melhores_ROTTEN = cut(ROTTEN, c(-Inf, quantile(ROTTEN, probs=0.95, type=5, na.rm=T), Inf), c(0,1))) %>%
   filter(melhores_IMDb==1&melhores_ROTTEN==1)
 ```
 
@@ -130,12 +116,12 @@ best_tvshow <- dataset %>% filter(Type==1) %>%
 
 10 Melhores Filmes
 ```{r}
-head(best_movies, 10)
+utils::head(best_movies, 10)
 ```
 
 
 10 Melhores Séries
 ```{r}
-head(best_tvshow, 10)
+utils::head(best_tvshow, 10)
 ```
 

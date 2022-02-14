@@ -26,7 +26,7 @@ load("D:/datasets/shoppings.RData")
 ### Exploração
 
 Visão estrutural:
-```{r}
+```{r eval=FALSE, include=FALSE}
 shoppings %>% 
   kable() %>%
   kable_styling(bootstrap_options = "striped", 
@@ -109,7 +109,7 @@ sp_shp <- SpatialPoints(coords = coordenadas_shoppings,
 
 
 Orientação a partir de distância eoclidiana:
-```{r}
+```{r warning=FALSE}
 shoppings_UTM <- spTransform(x = sp_shp,
                              CRSobj = CRS("+init=epsg:22523"))
 ```
@@ -187,7 +187,7 @@ plot(shoppings_dens)
 
 
 Definição das zonas de densidade:
-```{r}
+```{r warning=FALSE}
 zona1 <- getverticeshr(x = shoppings_dens, percent = 20) 
 zona2 <- getverticeshr(x = shoppings_dens, percent = 40) 
 zona3 <- getverticeshr(x = shoppings_dens, percent = 60) 
@@ -196,6 +196,7 @@ zona4 <- getverticeshr(x = shoppings_dens, percent = 80)
 
 
 ### Visualização com densidade:
+
 ```{r}
 tm_shape(shp = shp_sp) + 
   tm_fill(col = "gray90") + 

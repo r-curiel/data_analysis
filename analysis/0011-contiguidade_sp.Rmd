@@ -9,7 +9,7 @@ output: html_document
 
 Carregamento dos pacotes  
 ```{r message=FALSE, warning=FALSE}
-pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools")
+pacotes <- c("tidyverse","rgdal","spdep","knitr","kableExtra","tmap","gtools", "gridExtra")
 sapply(pacotes, require, character = T) 
 ```
 
@@ -18,7 +18,7 @@ sapply(pacotes, require, character = T)
 
 Carregamento da base de dados
 ```{r message=FALSE, warning=FALSE}
-shp_sp <- readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
+shp_sp <- rgdal::readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
 ```
 
 
@@ -27,7 +27,7 @@ shp_sp <- readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
 
 Visualização gráfica preliminar:
 ```{r}
-plot(shp_sp)
+raster::plot(shp_sp)
 ```
 
 
@@ -37,34 +37,27 @@ plot(shp_sp)
 
 Vizinhança por contiguidade:
 ```{r}
-nb_queen <- poly2nb(pl = shp_sp,
-                          queen = TRUE,
-                          row.names = shp_sp@data$NM_MUNICIP)
+nb_queen <- spdep::poly2nb(pl = shp_sp, queen = TRUE, row.names = shp_sp@data$NM_MUNICIP)
 ```
 
 
 Visualização estrutural:
 ```{r}
-summary(nb_queen)
+base::summary(nb_queen)
 ```
 
 
-
-Visualização do critério estabelecido:
+Visualização do critério Queen:
 ```{r}
-plot(shp_sp, border = "lightgray")
-plot(nb_queen, 
-     coordinates(shp_sp), 
-     add = TRUE, 
-     col = "#33638DFF")
+raster::plot(shp_sp, border = "lightgray", main = "Vizinhança por Contiguidade (Critério Queen)") + 
+raster::plot(nb_queen, coordinates(shp_sp), add = TRUE, col = "#33638DFF")
 ```
 
 
 Criação de matriz W com tratamento para a ilha:
 ```{r}
-matrizW_queen <- nb2mat(neighbours = nb_queen,
-                        style = "B",
-                        zero.policy = TRUE)
+matrizW_queen <- spdep::nb2mat(neighbours = nb_queen, style = "B", zero.policy = TRUE)
+
 colnames(matrizW_queen) <- shp_sp@data$NM_MUNICIP
 ```
 
@@ -73,32 +66,26 @@ colnames(matrizW_queen) <- shp_sp@data$NM_MUNICIP
 
 Vizinhança por contiguidade:
 ```{r}
-nb_rook <- poly2nb(pl = shp_sp,
-                         queen = FALSE,
-                         row.names = shp_sp@data$NM_MUNICIP)
+nb_rook <- spdep::poly2nb(pl = shp_sp, queen = FALSE, row.names = shp_sp@data$NM_MUNICIP)
 ```
 
 
 Visualização estrutural:
 ```{r}
-summary(nb_rook)
+base::summary(nb_rook)
 ```
 
 
-Visualização do critério estabelecido:
+Visualização do critério Rook:
 ```{r}
-plot(shp_sp, border = "lightgray")
-plot(nb_rook, 
-     coordinates(shp_sp), 
-     add = TRUE, 
-     col = "#33638DFF")
+raster::plot(shp_sp, border = "lightgray", main = "Vizinhança por Contiguidade (Critério Rook)") + 
+raster::plot(nb_rook, coordinates(shp_sp), add = TRUE, col = "#33638DFF")
 ```
 
 
 Criação de matriz W com tratamento para a ilha:
 ```{r}
-matrizW_rook <- nb2mat(neighbours = nb_rook,
-                        style = "B",
-                        zero.policy = TRUE)
+matrizW_rook <- spdep::nb2mat(neighbours = nb_rook, style = "B", zero.policy = TRUE)
+
 colnames(matrizW_queen) <- shp_sp@data$NM_MUNICIP
 ```

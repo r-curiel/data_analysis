@@ -18,9 +18,9 @@ library(readxl)
 
 ## Covid-19
 
-Dataset Covid-19 em csv com títulos, delimitador em vírgula e valores decimais com ponto.
+Dataset Covid-19 em csv com títulos, delimitador em vírgula e valores decimais com ponto:
 ```{r}
-dataset <- read.csv('D:/datasets/covid.csv', 
+dataset <- utils::read.csv('D:/datasets/covid.csv', 
                     header = TRUE, 
                     sep = ",", 
                     dec = ".")
@@ -32,7 +32,7 @@ dataset <- read.csv('D:/datasets/covid.csv',
 
 Visão estrutural:
 ```{r}
-glimpse(dataset)
+dplyr::glimpse(dataset)
 ```
 
 
@@ -40,8 +40,8 @@ glimpse(dataset)
 
 Renomear colunas:
 ```{r}
-dataset <- dataset %>% rename(country=1,
-                             region=2,
+dataset <- dataset %>% dplyr::rename(Localidade=1,
+                             Região=2,
                              case_total=3,
                              case_relative=4,
                              case_week=5,
@@ -52,33 +52,33 @@ dataset <- dataset %>% rename(country=1,
                              death_week=10,
                              death_week_relative=11,
                              death_day=12,
-                             transmission=13)
+                             Transmissão=13)
 ```
 
 
 Remoção dos índices 'Global' e 'Others':
 ```{r}
 dataset <- dataset[-c(1),]
-dataset <- dataset[!(dataset$region=='Other'),]
+dataset <- dataset[!(dataset$Região=='Other'),]
 ```
 
 
 Renomear valores de transmissão e criação da variável grupos por quartil:
 ```{r}
-dataset <- dataset %>% mutate(transmission = recode(transmission,
+dataset <- dataset %>% dplyr::mutate(Transmissão = dplyr::recode(Transmissão,
                                                               "Clusters of cases" = "cluster_case",
                                                               "Community transmission" = "com_transm",
                                                               "No cases" = "no_case",
                                                               "Pending" = "pend",
                                                               "Sporadic cases" = "spor_case")) %>% 
-                      mutate(group = cut(case_relative, 
-                                         c(-Inf, 
-                                           quantile(dataset$case_relative, 
+                      dplyr::mutate(Grupo = base::cut(case_relative, 
+                                         base::c(-Inf, 
+                                           stats::quantile(dataset$case_relative, 
                                            type=5, 
                                            probs = c(0.25, 0.50, 0.75),
                                            TRUE),
                                            Inf),
-                                         c('First_quant', 
+                                         base::c('First_quant', 
                                            'Second_quant', 
                                            'Third_quant', 
                                            'Fourth_quant')))  
@@ -87,31 +87,31 @@ dataset <- dataset %>% mutate(transmission = recode(transmission,
 
 Reposicionamento de grupo e remoção de mortes:
 ```{r}
-dataset <- dataset %>% select('country', 'region', 'group', everything(), -'death_day')
+dataset <- dataset %>% dplyr::select('Localidade', 'Região', 'Grupo', dplyr::everything(), -'death_day')
 ```
 
 
 
 ### Resumo estatístico
 
-Por quartil
+Por quartil:
 ```{r}
-g_quant <- dataset %>% group_by(group) %>%
-                       summarise(avg=mean(case_relative, na.rm = T),
-                                standar_dev=sd(case_relative, na.rm = T),
-                                obs.=n()) %>%
-                       ungroup () %>% droplevels(.)
+g_quant <- dataset %>% dplyr::group_by(Grupo) %>%
+                       dplyr::summarise(Média=base::mean(case_relative, na.rm = T),
+                                'Desvio Padrão'=stats::sd(case_relative, na.rm = T),
+                                Observações=dplyr::n()) %>%
+                       dplyr::ungroup() %>% base::droplevels(.)
 
 g_quant
 ```
 
 
-Por região
+Por região:
 ```{r}
-g_region <- dataset %>% group_by(region) %>%
-                       summarise(avg=mean(case_relative, na.rm = T),
-                                standar_dev=sd(case_relative, na.rm = T),
-                                obs.=n(),
+g_region <- dataset %>% group_by(Região) %>%
+                       summarise(Média=mean(case_relative, na.rm = T),
+                                'Desvio Padrão'=sd(case_relative, na.rm = T),
+                                Observações=n(),
                                 '%perc'=(round(n()/nrow(dataset)*100,2))) %>%
                        ungroup () %>% droplevels(.)
 
@@ -119,13 +119,13 @@ g_region
 ```
 
 
-Por transmissão
+Por transmissão:
 ```{r}
-g_transmission <- dataset %>% group_by(transmission) %>%
-                       summarise(avg=mean(case_relative, na.rm = T),
-                                standar_dev=sd(case_relative, na.rm = T),
-                                obs.=n(),
-                                perc=(round(n()/nrow(dataset)*100,2))) %>%
+g_transmission <- dataset %>% group_by(Transmissão) %>%
+                       summarise(Média=mean(case_relative, na.rm = T),
+                                'Desvio Padrão'=sd(case_relative, na.rm = T),
+                                Observações=n(),
+                                '%perc'=(round(n()/nrow(dataset)*100,2))) %>%
                        ungroup () %>% droplevels(.)
 
 g_transmission
@@ -137,7 +137,7 @@ g_transmission
 
 Dataset WBD PIB per capta em xls.
 ```{r}
-pib <- read_excel('D:/datasets/wbd_income.xls')
+pib <- readxl::read_excel('D:/datasets/wbd_income.xls')
 ```
 
 
@@ -150,12 +150,11 @@ glimpse(pib)
 ```
 
 
-
 ### Limpeza
 
 Renomear colunas:
 ```{r}
-pib <- pib %>% rename(country=1,
+pib <- pib %>% rename(Localidade=1,
                      c_code=2,
                      income=3)
 ```
@@ -164,14 +163,13 @@ pib <- pib %>% rename(country=1,
 
 ## Covid-19 e PIB
 
-
 ### Combinação das bases
 
 Combinação da base de dados
 ```{r}
-dataset2 <- pib %>% right_join(dataset, by ="country") %>%
-                    select(everything(), -c('c_code', '2019')) %>%
-                    mutate(income = recode(income,
+dataset2 <- pib %>% dplyr::right_join(dataset, by ="Localidade") %>%
+                    dplyr::select(everything(), -c('c_code', '2019')) %>%
+                    dplyr::mutate(income = dplyr::recode(income,
                                           "High income" = "1 - High",
                                           "Low income" = "4 - Low",
                                           "Lower middle income" = "3 - L_Middle",
@@ -182,18 +180,18 @@ dataset2 <- pib %>% right_join(dataset, by ="country") %>%
 
 ## Resultados
 
-
 ### Gráfico resumido de casos por faixa de renda
 ```{r}
 dataset2 %>% group_by(income) %>%
-             summarise(avg=mean(case_relative, na.rm = T),
-                       standar_dev=sd(case_relative, na.rm = T),
-                       obs.=n(),
-                       perc=(round(n()/nrow(dataset2)*100,2))) %>%
+             summarise(Média=mean(case_relative, na.rm = T),
+                       'Desvio Padrão'=sd(case_relative, na.rm = T),
+                       Observações=n(),
+                       '%perc'=(round(n()/nrow(dataset2)*100,2))) %>%
                        ungroup () %>% droplevels(.) %>%
-  ggplot() + 
-  geom_col(aes(x=income, y=avg), fill="dark blue") + 
+  ggplot(aes(x=income, y=Média, fill=income)) + 
+    geom_bar(stat="identity", position = position_dodge(width = 0.7)) + 
+    geom_text(aes(label=round(Média)), position=position_dodge(width=0.9), vjust=-0.25, size = 3) +
     labs(x = "Faixa de Renda",
          y = "Média de Casos Relativos",
-         title = "Análise de casos de Covid-19 por faixa de renda")
+         title = "Análise de casos de Covid-19 por Faixa de Renda")
 ```

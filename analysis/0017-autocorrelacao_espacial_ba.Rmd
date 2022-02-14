@@ -18,7 +18,7 @@ sapply(pacotes, require, character = T)
 
 Carregamento da base de dados
 ```{r message=FALSE, warning=FALSE}
-shp_ba <- readOGR(dsn = "D:/datasets/shapefile_ba", layer = "ba_state", encoding = "UTF-8", use_iconv = TRUE)
+shp_ba <- rgdal::readOGR(dsn = "D:/datasets/shapefile_ba", layer = "ba_state", encoding = "UTF-8", use_iconv = TRUE)
 load("D:/datasets/dados_ba.RData")
 ```
 
@@ -29,19 +29,20 @@ load("D:/datasets/dados_ba.RData")
 União das bases de dados
 ```{r}
 shp_ba@data %>% 
-  left_join(dados_ba, by = "Codigo") ->shp_ba@data
+  dplyr::left_join(dados_ba, by = "Codigo") -> shp_ba@data
 ```
 
 
 Estabelecimento do critério de vizinhança (distância geográfica) de 90km:
 ```{r}
-nb_distan <- dnearneigh(coordinates(shp_ba), d1 = 0, d2 = 90, longlat = TRUE)
+nb_distan <- spdep::dnearneigh(coordinates(shp_ba), d1 = 0, d2 = 90, longlat = TRUE)
 ```
 
 
 Matriz W:
 ```{r}
-w_matrix_distan <- nb2mat(neighbours = nb_distan, style = "B")
+w_matrix_distan <- spdep::nb2mat(neighbours = nb_distan, style = "B")
+
 colnames(w_matrix_distan) <- shp_ba@data$MUNICIPIO
 rownames(w_matrix_distan) <- shp_ba@data$MUNICIPIO
 ```
@@ -49,7 +50,7 @@ rownames(w_matrix_distan) <- shp_ba@data$MUNICIPIO
 
 Alteração do tipo do objeto (de Matrizw para Listw):
 ```{r}
-w_list_distan <- mat2listw(x = w_matrix_distan)
+w_list_distan <- spdep::mat2listw(x = w_matrix_distan)
 ```
 
 
@@ -57,18 +58,18 @@ w_list_distan <- mat2listw(x = w_matrix_distan)
 
 Estatística G de Getis e Ord:
 ```{r}
-g_local <- localG(x = shp_ba@data$idh, listw = w_list_distan)
+g_local <- spdep::localG(x = shp_ba@data$idh, listw = w_list_distan)
 ```
 
 
 União do objeto g_local ao shapefile:
 ```{r}
-mapa_G <- cbind(shp_ba, as.matrix(g_local)) 
+mapa_G <- base::cbind(shp_ba, as.matrix(g_local)) 
 
 mapa_G@data %>% 
-  rename(estistica_g = 4) -> mapa_G@data
+  dplyr::rename(estistica_g = 4) -> mapa_G@data
 
-head(mapa_G@data)
+utils::head(mapa_G@data)
 ```
 
 
@@ -76,11 +77,13 @@ head(mapa_G@data)
 
 ```{r}
 mapa_G@data <- mapa_G@data %>% 
-  mutate(faixa_quantis = factor(quantcut(x = estistica_g, q = 8))) 
+  dplyr::mutate(faixa_quantis = factor(quantcut(x = estistica_g, q = 4))) 
 
 tm_shape(mapa_G) + 
-  tm_fill("faixa_quantis", 
-          palette = "-RdBu") + 
+  tm_fill("faixa_quantis", palette = "RdBu", title = "Faixas Quantis") + 
+  tm_layout(main.title.size = 0.83,
+            main.title = "Autocorrelação Local pela Estatística G de Getis e Ord\nIDH no Estado da Bahia",
+            main.title.position = 'center') +
   tm_borders()
 ```
 

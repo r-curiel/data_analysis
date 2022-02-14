@@ -18,7 +18,7 @@ sapply(pacotes, require, character = T)
 
 Carregamento da base de dados
 ```{r message=FALSE, warning=FALSE}
-shp_sc <- readOGR(dsn = "D:\\datasets\\shapefile_sc", 
+shp_sc <- rgdal::readOGR(dsn = "D:\\datasets\\shapefile_sc", 
                   layer = "sc_state",
                   encoding = "UTF-8", 
                   use_iconv = TRUE)
@@ -30,10 +30,9 @@ shp_sc <- readOGR(dsn = "D:\\datasets\\shapefile_sc",
 
 Vizinhança por knearneigh:
 ```{r}
-lista_knear <- knearneigh(coordinates(shp_sc), 
-                          longlat = TRUE, 
-                          k = 3)
-nb_knear <- knn2nb(knn = lista_knear)
+lista_knear <- spdep::knearneigh(coordinates(shp_sc), longlat = TRUE, k = 3)
+
+nb_knear <- spdep::knn2nb(knn = lista_knear)
 ```
 
 
@@ -45,18 +44,16 @@ nb_knear
 
 Visualização do critério estabelecido:
 ```{r}
-plot(shp_sc, border = "lightgray")
-plot(nb_knear, 
-     coordinates(shp_sc), 
-     add = TRUE, 
-     col = "#13306DFF")
+raster::plot(shp_sc, border = "lightgray", main = "Vizinhança k-Nearest")
+
+raster::plot(nb_knear, coordinates(shp_sc), add = TRUE, col = "#13306DFF")
 ```
 
 
 Criação de matriz W:
 ```{r}
-matrizW_knear  <- nb2mat(neighbours = nb_knear,
-                         style = "B")
+matrizW_knear  <- spdep::nb2mat(neighbours = nb_knear, style = "B")
+
 colnames(matrizW_knear) <- shp_sc@data$NM_MUNICIP
 rownames(matrizW_knear) <- shp_sc@data$NM_MUNICIP
 ```

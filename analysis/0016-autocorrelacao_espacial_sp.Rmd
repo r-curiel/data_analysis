@@ -18,8 +18,9 @@ sapply(pacotes, require, character = T)
 
 Carregamento da base de dados
 ```{r message=FALSE, warning=FALSE}
-shp_sp <- readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
-load("D:/datasets/dados_sp.RData")
+shp_sp <- rgdal::readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
+
+base::load("D:/datasets/dados_sp.RData")
 ```
 
 
@@ -29,43 +30,47 @@ load("D:/datasets/dados_sp.RData")
 União das bases de dados
 ```{r}
 shp_sp@data %>% 
-  rename(codigo = 2) %>% 
-  mutate(codigo = as.numeric(codigo)) %>% 
-  left_join(dados_sp, by = "codigo") -> shp_sp@data
+  dplyr::rename(codigo = 2) %>% 
+  dplyr::mutate(codigo = base::as.numeric(codigo)) %>% 
+  dplyr::left_join(dados_sp, by = "codigo") -> shp_sp@data
+
 head(shp_sp@data, 3)
 ```
 
 
 Estabelecimento do critério de vizinhança:
 ```{r}
-nb_queen <- poly2nb(pl = shp_sp,
-                          queen = TRUE,
-                          row.names = shp_sp@data$NM_MUNICIP)
+nb_queen <- spdep::poly2nb(pl = shp_sp,
+                           queen = TRUE,
+                           row.names = shp_sp@data$NM_MUNICIP)
 ```
 
 
 Matriz W:
 ```{r}
-w_matrix_queen <- nb2mat(neighbours = nb_queen,
-                        style = "B",
-                        zero.policy = TRUE) # (desconsidera ilha)
+w_matrix_queen <- spdep::nb2mat(neighbours = nb_queen,
+                                style = "B",
+                                zero.policy = TRUE) # (desconsidera ilha)
 colnames(w_matrix_queen) <- shp_sp@data$NM_MUNICIP
 ```
 
 
 Matriz W para Lista
 ```{r}
-w_list_queen <- mat2listw(w_matrix_queen)
+w_list_queen <- spdep::mat2listw(w_matrix_queen)
 ```
 
 
 
 ### Visualização
 
-Visualização gráfica preliminar da distribuição do IDH
+Visualização gráfica preliminar da distribuição do IDH:
 ```{r}
 tm_shape(shp = shp_sp) +
-  tm_fill(col = "idh", style = "quantile", n = 5, palette = "Blues") +
+  tm_fill(col = "idh", style = "quantile", n = 5, palette = "viridis", title = "IDH") +
+  tm_layout(legend.text.size = 0.7,
+            legend.title.size = 0.9,
+            main.title = "Distribuição do IDH nos Municípios de SP") +
   tm_borders()
 ```
 
@@ -78,9 +83,7 @@ tm_shape(shp = shp_sp) +
 ### Autocorrelação Global - Estatística I de Moran:
 
 ```{r}
-moran.test(x = shp_sp@data$idh, 
-           listw = w_list_queen, 
-           zero.policy = TRUE)
+spdep::moran.test(x = shp_sp@data$idh, listw = w_list_queen, zero.policy = TRUE)
 ```
 Observado Autocorrelação do tipo positiva (I de Moran > Esperado)
 Revela que: observações com alto IDH estão próximas outras observações com alto IDH.
@@ -102,47 +105,51 @@ moran.plot(x = shp_sp@data$idh,
 
 Padronização em linha:
 ```{r}
-w_matrix_queen_linha <- nb2mat(nb_queen,
-                              style = "W",
-                              zero.policy = TRUE)
+w_matrix_queen_linha <- spdep::nb2mat(nb_queen, style = "W", zero.policy = TRUE)
 
-list_w_queen <- mat2listw(w_matrix_queen_linha)
+list_w_queen <- spdep::mat2listw(w_matrix_queen_linha)
 ```
 
 
 Criação da Moran Local:
 ```{r}
-moran_local <- localmoran(x = shp_sp@data$idh, 
-                          listw = list_w_queen, 
-                          zero.policy = TRUE)
+moran_local <- spdep::localmoran(x = shp_sp@data$idh, listw = list_w_queen, zero.policy = TRUE)
 
-moran_local_map <- cbind(shp_sp, moran_local)
+moran_local_map <- base::cbind(shp_sp, moran_local)
 ```
 
 
 Visualização Espacial:
 ```{r}
 # Ajustes da legenda:
-quantile(moran_local_map@data$Ii, type = 5, probs = c(0,0.2,0.4,0.6,0.8))
+raster::quantile(moran_local_map@data$Ii, type = 5, probs = c(0,0.2,0.4,0.6,0.8))
 
 moran_local_map@data <- moran_local_map@data %>% 
-  mutate(faixa_quantis = factor(quantcut(x = Ii, q = 5))) 
+    dplyr::mutate(faixa_quantis = base::factor(quantcut(x = Ii, q = 5))) 
 
 # Visualização
 tm_shape(shp = moran_local_map) +
-  tm_fill(col = "faixa_quantis", palette = "Blues") +
-  tm_borders()
+    tm_fill(col = "faixa_quantis", palette = "RdYlBu", title = "Faixas") +
+    tm_layout(legend.text.size = 0.7,
+            legend.title.size = 0.9,
+            main.title = "Faixa de Quantis do IDH do Estado de São Paulo") +
+    tm_borders()
 ```
 
 
 Plotagem demonstrando os quadrantes:
 ```{r}
-moran_local_map <- cbind(moran_local_map, 
-                          attr(x = moran_local, which = "quadr")[1])
+moran_local_map <- base::cbind(moran_local_map, 
+                               base::attr(x = moran_local, which = "quadr")[1])
 
 tm_shape(shp = moran_local_map) +
-  tm_fill(col = "mean", palette = "Blues") +
-  tm_borders(col = "gray")
+  tm_fill(col = "mean", palette = "viridis", title = "Quadrantes") +
+  tm_layout(legend.text.size = 0.7,
+            legend.title.size = 0.9,
+            main.title = "Quadrantes de Autocor. Espacial Local de Moran",
+            main.title.position = 'center') +
+
+  tm_borders()
 ```
 
 
@@ -151,19 +158,19 @@ tm_shape(shp = moran_local_map) +
 
 Geração dos quadrantes:
 ```{r}
-quadrantes <- vector(mode = "numeric", length = nrow(moran_local))
+quadrantes <- base::vector(mode = "numeric", length = nrow(moran_local))
 ```
 
 
 Centro dos valores do IDH ao redor da média:
 ```{r}
-centro_idh <- shp_sp@data$idh - mean(shp_sp@data$idh)
+centro_idh <- shp_sp@data$idh - base::mean(shp_sp@data$idh)
 ```
 
 
 Centro dos valores da Moran Local ao redor da média:
 ```{r}
-centro_moran_local <- moran_local[,1] - mean(moran_local[,1])
+centro_moran_local <- moran_local[,1] - base::mean(moran_local[,1])
 ```
 
 
@@ -184,24 +191,27 @@ quadrantes[centro_idh < 0 & centro_moran_local < 0] <- "LL"
 
 Eliminação das observações sem significância estatística:
 ```{r}
-quadrantes[moran_local[,5] > sig] <- "Estatisticamente_não_significante"
+quadrantes[moran_local[,5] > sig] <- "Estatisticamente Não Significante"
 ```
 
 
 União dos objetos:
 ```{r}
-moran_local_map@data["quadrantes"] <- factor(quadrantes)
+moran_local_map@data["Quadrantes"] <- base::factor(quadrantes)
 ```
 
 
 Visualização gráfica:
 ```{r}
 tm_shape(shp = moran_local_map) +
-  tm_polygons(col = "quadrantes", 
-              pal = c(HH = "darkred",
-                      HL = "red", 
-                      LH = "lightblue", 
-                      LL = "darkblue",
-                      Estatisticamente_não_significante = "white")) +
+  tm_polygons(col = "Quadrantes", 
+              pal = c(HH = "#FDE725FF",
+                      HL = "#35B779FF", 
+                      LH = "#31688EFF", 
+                      LL = "#440154FF",
+                      "Estatisticamente Não Significante" = "gray")) +
+  tm_layout(main.title = "LISA do IDH no Estado de SP",
+            main.title.position = 'center') +
   tm_borders()
 ```
+

@@ -81,9 +81,14 @@ Visualização combinada de raster com shapefile
 tm_shape(shp = rlv_sp) + 
   tm_raster(style = "quantile", 
             n = 5,
-            palette = "viridis") +
+            palette = "viridis",
+            title = "Altitude",
+            ) +
   tm_shape(shp = shp_sp) + 
   tm_borders() + 
   tm_layout(legend.position = c("left", "bottom"), 
-            legend.outside = TRUE)
+            legend.outside = TRUE,
+            frame = F,
+            main.title = "Recorte do Litoral Paulista"
+            )
 ```

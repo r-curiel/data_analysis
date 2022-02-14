@@ -71,7 +71,8 @@ shp_centro_oeste_df %>%
                  color = "black") +
     labs(x = "Longitude",
          y = "Latitude",
-         fill = "State") +
+         fill = "State",
+         title = "Distribuição dos Estados do Centro-Oeste do Brasil") +
     scale_fill_viridis_d(option = "viridis") +
     theme_bw()
 ```
@@ -97,11 +98,13 @@ tm_shape(shp = shp_centro_oeste_dados) +
   tm_fill(col = "poverty", 
           style = "quantile", 
           n = 4, 
-          palette = "cividis", 
-          legend.hist = TRUE) +
+          palette = "-viridis", 
+          legend.hist = TRUE,
+          title = "Taxa de Pobreza") +
   tm_borders(alpha = 0.8) +
   tm_compass() +
-  tm_layout(legend.outside = TRUE)
+  tm_layout(legend.outside = TRUE,
+            main.title = "Dist. da Vulnerabilidade Social no CO do Brasil")
 ```
 
 
@@ -135,11 +138,10 @@ shp_centro_oeste_df %>%
   ggplot() +
   geom_polygon(aes(x = long, y = lat, group = group, fill = poverty_bands),
                color = "black") +
-  labs(x = "Longitude",
-       y = "Latitude",
-       fill = "Poverty") +
-  scale_fill_viridis_d(option = "viridis") +
-  theme_bw()
+  labs(fill = "Taxa de Pobreza",
+       title = "Dist. da Vulnerabilidade Social no CO do Brasil") +
+  scale_fill_viridis_d(begin = 1, end = 0, option = "viridis") + 
+  theme_update()
 ```
 
 
@@ -148,9 +150,10 @@ Visualização do histograma:
 shp_centro_oeste_df %>% 
   ggplot() +
   geom_histogram(aes(x = poverty, fill = ..count..), color = "white") +
-  scale_fill_gradient("Poverty", low = "#440154FF", high = "#FDE725FF") +
-  labs(x = "Poverty",
-       y = "Frequência") +
+  scale_fill_gradient("Taxa de Pobreza", low = "#FEECE3", high = "#980B13") +
+  labs(x = "Taxa de Pobreza",
+       y = "Frequência",
+       title = "Dist. da Vulnerabilidade Social no CO do Brasil") +
   theme_bw()
 ```
 

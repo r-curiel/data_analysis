@@ -1,0 +1,399 @@
+---
+title: "ML Basics - Árvore de Decisão - Modelo_T0001"
+author: "Rafael Vinicius Curiel"
+date: "11/02/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("titanic", "tidyverse", "rpart", "rpart.plot", "gtools", "Rmisc", "scales", "caret", "plotROC", "egg")
+base::sapply(pacotes, require, character = T) 
+```
+
+
+### Carregamento do objeto
+
+Carregamento da base de dados e atribuindo a uma base temporária:
+```{r message=FALSE, warning=FALSE}
+base::load("D:/datasets/titanic.RData")
+titanic_temp<- titanic
+titanic_temp %>% head
+```
+
+
+
+## Exploração
+
+Criação de nova coluna binária para sobrevivência:
+```{r}
+titanic_temp$survived <- base::as.integer(titanic$Survived=="Y")
+```
+
+
+Criação de uma função para análise descritiva:
+```{r}
+descritiva <- function(var){
+  tgc <- Rmisc::summarySE(titanic_temp, measurevar="survived", groupvars=c(var))
+  
+  ggplot(tgc) + 
+    geom_bar(aes(x=tgc[,var], weight=N/891, fill=as.factor(tgc[,var]))) + 
+    geom_errorbar(aes(x=tgc[,var], y=survived, ymin=survived-se, ymax=survived+se, colour='1'), width=.1) +
+    geom_point(aes(x=tgc[,var], y=survived, colour='1', group='1')) +
+    geom_line(aes(x=tgc[,var], y=survived, colour='1', group='1')) +
+    theme(panel.background = element_rect(fill = "white", colour = "grey", linetype = "solid"),
+          panel.grid.major = element_line(size = 0.15, linetype = 'solid', colour = "grey")) + 
+    theme(legend.position = "none") +
+    xlab(var) + ylab("Taxa de sobreviventes") + 
+    scale_y_continuous(sec.axis = sec_axis(~.*891, name = "Frequencia"), labels = scales::percent)
+}
+```
+
+
+Visualização gráfica dos sobreviventes por sexo:
+```{r}
+descritiva("Sex")
+```
+
+
+Visualização gráfica dos sobreviventes por classe:
+```{r}
+descritiva("Pclass")
+```
+
+
+Visualização gráfica dos sobreviventes por embarque:
+```{r}
+descritiva("Embarked")
+```
+
+
+Visualização gráfica dos sobreviventes com irmãos/cônjuge:
+```{r}
+descritiva("SibSp")
+```
+
+
+Visualização gráfica dos sobreviventes com pais/filhos:
+```{r warning=FALSE}
+descritiva("Parch")
+```
+
+
+Visualização gráfica dos sobreviventes por idade (categorizada):
+```{r}
+titanic_temp$cat_age <- gtools::quantcut(titanic$Age, 20)
+descritiva("cat_age")
+```
+
+
+Visualização gráfica dos sobreviventes pelo preço do bilhete (categorizada):
+```{r}
+titanic_temp$cat_fare <- gtools::quantcut(titanic$Fare, 10)
+descritiva("cat_fare")
+```
+
+
+## Modelo 1
+
+Árvore de Decisão M1:
+```{r}
+m1_arvore <- rpart::rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+                data=titanic,
+                parms = list(split = 'gini'), 
+                method='class'
+)
+```
+
+
+### Visualização Árvore M1
+
+```{r warning=FALSE}
+palete = scales::brewer_pal(palette = "Set2")(4)
+rpart.plot::rpart.plot(m1_arvore,
+                       box.palette = palete)
+```
+
+
+### Avaliação M1
+
+Probabilidade e Classificação:
+```{r}
+m1_probabilidade = stats::predict(m1_arvore, titanic)
+m1_classificacao = m1_probabilidade[,2]>.5
+```
+
+
+Matriz de Confusão:
+```{r}
+m1_confusao <- table(m1_classificacao, titanic$Survived)
+m1_confusao
+```
+
+
+Acurácia M1:
+```{r}
+m1_acuracia <- ((m1_confusao[1,1] + m1_confusao[2,2])/ sum(m1_confusao))
+sprintf('Acurácia M1: %s ', percent(m1_acuracia))
+```
+
+
+
+## Modelo 2 - Cross Validation
+
+Base de Treino e Teste:
+```{r}
+set.seed(123)
+
+m2_base <- stats::runif(dim(titanic)[1])>.25
+
+m2_treino <- titanic[m2_base,]
+m2_teste  <- titanic[!m2_base,]
+```
+
+
+Árvore de Decisão M2:
+```{r}
+set.seed(123)
+m2_arvore <- rpart::rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+                data=m2_treino,
+                method='class',
+                xval=5,
+                control = rpart.control(cp = 0, 
+                                        minsplit = 1, 
+                                        maxdepth = 30)
+)
+```
+
+
+### Visualização Árvore M2
+
+```{r}
+palete = scales::brewer_pal(palette = "Set2")(4)
+rpart.plot::rpart.plot(m2_arvore,
+                       box.palette = palete)
+```
+
+
+### Treino M2
+
+Avaliação Treino M2:
+```{r}
+m2_treino_probabilidade = stats::predict(m2_arvore, m2_treino)
+m2_treino_classificacao = base::factor(ifelse(m2_treino_probabilidade[,2]>.5, "Y", "N"))
+
+m2_confusao <- base::table(m2_treino_classificacao, m2_treino$Survived)
+m2_acuracia <- (m2_confusao[1,1]+m2_confusao[2,2])/nrow(m2_treino)
+base::sprintf('Acurácia Treino M2: %s ', percent(m2_acuracia))
+```
+
+
+Avaliação Teste M2:
+```{r}
+m2_teste_probabilidade = stats::predict(m2_arvore, m2_teste)
+m2_teste_classificacao = base::factor(ifelse(m2_teste_probabilidade[,2]>.5, "Y", "N"))
+
+m2_confusao <- table(m2_teste_classificacao, m2_teste$Survived)
+m2_acuracia <- (m2_confusao[1,1]+m2_confusao[2,2])/nrow(m2_teste)
+sprintf('Acurácia Teste M2: %s ', percent(m2_acuracia))
+```
+
+
+
+## Curva ROC - Receiver Operating Characteristic Curve
+
+### Base Treino
+
+Criação do DataFrame:
+```{r}
+m2_treino_avaliacao <- base::data.frame(obs=m2_treino$Survived, 
+                         pred=m2_treino_classificacao,
+                         Y = m2_treino_probabilidade[,2],
+                         N = 1-m2_treino_probabilidade[,2]
+                         )
+```
+
+
+Cálculo da Perfomance (ROC, Sensitividade e Especificidade):
+```{r}
+caret::twoClassSummary(m2_treino_avaliacao, lev=levels(m2_treino_avaliacao$obs))
+```
+
+
+Visualização da Curva ROC:
+```{r warning=FALSE}
+m2_treino_CurvaROC <- ggplot2::ggplot(m2_treino_avaliacao, aes(d = obs, m = Y, colour='1')) + 
+  plotROC::geom_roc(n.cuts = 0) +
+  scale_color_viridis_d(direction = -1, begin=0, end=.25) +
+  theme(legend.position = "none") +
+  ggtitle("Curva ROC - Base de Treino")
+
+m2_treino_CurvaROC
+```
+
+
+### Base Teste
+
+```{r}
+m2_teste_avaliacao <- data.frame(obs=m2_teste$Survived, 
+                         pred=m2_teste_classificacao,
+                         Y = m2_teste_probabilidade[,2],
+                         N = 1-m2_teste_probabilidade[,2]
+                         )
+```
+
+
+Cálculo da Perfomance (ROC, Sensitividade e Especificidade):
+```{r}
+caret::twoClassSummary(m2_teste_avaliacao, lev=levels(m2_teste_avaliacao$obs))
+```
+
+
+Visualização da Curva ROC
+```{r warning=FALSE}
+m2_teste_CurvaROC <- ggplot2::ggplot(m2_teste_avaliacao, aes(d = obs, m = Y, colour='1')) + 
+  plotROC::geom_roc(n.cuts = 0) +
+  scale_color_viridis_d(direction = -1, begin=0, end=.25) +
+  theme(legend.position = "none") +
+  ggtitle("Curva ROC - Base de Teste")
+
+m2_teste_CurvaROC
+```
+
+
+Visualização Conjunta dos Resultados
+```{r warning=FALSE}
+egg::ggarrange(m2_treino_CurvaROC, m2_teste_CurvaROC, ncol = 2)
+```
+
+
+
+## Prunning - Grid Search
+
+### Definição do CP (Complexity Parameter) Mínimo
+
+Possibilidades de CP
+```{r}
+tab_cp <- rpart::printcp(m2_arvore)
+tab_cp
+```
+
+
+Plotagem dos CP's:
+```{r}
+rpart::plotcp(m2_arvore)
+```
+
+
+Definição do CP mínimo:
+```{r}
+tab_cp[which.min(tab_cp[,'xerror']),]
+cp_min <- tab_cp[which.min(tab_cp[,'xerror']),'CP']
+sprintf('CP mínimo %.5f ', cp_min)
+```
+
+
+### Decision Tree
+
+Árvore com CP Mínimo:
+```{r}
+set.seed(1)
+m2_arvore_poda <- rpart::rpart(Survived ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked,
+                            data=m2_treino,
+                            method='class',
+                            xval=0,
+                            control = rpart.control(cp = cp_min, 
+                                                    minsplit = 1, 
+                                                    maxdepth = 30)
+)
+```
+
+
+### Visualização Árvore M2 Podada
+
+```{r}
+palete = scales::brewer_pal(palette = "Set2")(4)
+rpart.plot::rpart.plot(m2_arvore_poda,
+                       box.palette = palete)
+```
+
+
+### Treino
+
+Definição do Treino:
+```{r}
+m2_2_treino_probabilidade = stats::predict(m2_arvore_poda, m2_treino)
+m2_2_treino_classificacao = base::factor(ifelse(m2_2_treino_probabilidade[,2]>.5, "Y", "N"))
+```
+
+
+Avaliação do Treino:
+```{r}
+m2_2_treino_avaliacao <- data.frame(obs=m2_treino$Survived, 
+                          pred=m2_2_treino_classificacao,
+                          Y = m2_2_treino_probabilidade[,2],
+                          N = 1-m2_2_treino_probabilidade[,2]
+)
+```
+
+
+Cálculo da Perfomance (ROC, Sensitividade e Especificidade):
+```{r}
+caret::twoClassSummary(m2_2_treino_avaliacao, lev=levels(m2_2_treino_avaliacao$obs))
+```
+
+
+Curva ROC:
+```{r warning=FALSE}
+m2_2_treino_CurvaROC <- ggplot2::ggplot(m2_2_treino_avaliacao, aes(d = obs, m = Y, colour='1')) + 
+  plotROC::geom_roc(n.cuts = 0) +
+  scale_color_viridis_d(direction = -1, begin=0, end=.25) +
+  theme(legend.position = "none") +
+  ggtitle("Curva ROC - base de treino")
+
+m2_2_treino_CurvaROC
+```
+
+
+### Teste
+
+Definição do Teste:
+```{r}
+m2_2_teste_probabilidade = stats::predict(m2_arvore_poda, m2_teste)
+m2_2_teste_classificacao = base::factor(ifelse(m2_2_teste_probabilidade[,2]>.5, "Y", "N"))
+```
+
+
+Avaliação do Treino:
+```{r}
+m2_2_teste_avaliacao <- data.frame(obs=m2_teste$Survived, 
+                         pred=m2_2_teste_classificacao,
+                         Y = m2_2_teste_probabilidade[,2],
+                         N = 1-m2_2_teste_probabilidade[,2]
+)
+```
+
+
+Cálculo da Perfomance (ROC, Sensitividade e Especificidade):
+```{r}
+caret::twoClassSummary(m2_2_teste_avaliacao, lev=levels(m2_2_teste_avaliacao$obs))
+```
+
+
+Curva ROC:
+```{r warning=FALSE}
+m2_2_teste_CurvaROC <- ggplot(m2_2_teste_avaliacao, aes(d = obs, m = Y, colour='a')) + 
+  plotROC::geom_roc(n.cuts = 0) +
+  scale_color_viridis_d(direction = -1, begin=0, end=.25) +
+  theme(legend.position = "none") +
+  ggtitle("Curva ROC - base de teste")
+
+m2_2_teste_CurvaROC
+```
+
+
+```{r warning=FALSE}
+egg::ggarrange(m2_2_treino_CurvaROC, m2_2_teste_CurvaROC, ncol = 2)
+```

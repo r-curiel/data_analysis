@@ -27,8 +27,8 @@ dataset <- read_excel("D:/datasets/cvm_result.xlsx")
 
 Visão estrutural - Amplitude de contas demonstradas:
 ```{r include=FALSE}
-options(max.print = 3000)
-unique(dataset$`DS_CONTA`)
+base::options(max.print = 3000)
+base::unique(dataset$`DS_CONTA`)
 ```
 
 
@@ -37,47 +37,47 @@ unique(dataset$`DS_CONTA`)
 
 Inclusão das colunas de Receita de Vendas (3.01) e Lucro/Prejuízo Líquido (3.11):
 ```{r}
-dataset <- dataset %>% filter(CD_CONTA=="3.01"|CD_CONTA=="3.11")
+dataset <- dataset %>% dplyr::filter(CD_CONTA=="3.01"|CD_CONTA=="3.11")
 ```
 
 
 Agrupamento de valores de 2019 e 2020 em dataset ajustado:
 ```{r}
 dataset_aj <- dataset %>% 
-  group_by(CD_CONTA, CD_CVM) %>% 
-  arrange(dataset, DT_REFER, .by_group = T) %>% 
-  ungroup () %>% droplevels(.)
+  dplyr::group_by(CD_CONTA, CD_CVM) %>% 
+  dplyr::arrange(dataset, DT_REFER, .by_group = T) %>% 
+  dplyr::ungroup () %>% base::droplevels(.)
 ```
 
 
 Conversão da coluna 'VL_CONTA' em numérico:
 ```{r}
-valor_conta <- as.numeric(dataset_aj$VL_CONTA)
+valor_conta <- base::as.numeric(dataset_aj$VL_CONTA)
 ```
 
 
 Ajuste da amplitude dos valores em 'VL_CONTA':
 ```{r}
-dataset_aj <- dataset_aj %>% mutate(VALORES = valor_conta / 10000000000)
+dataset_aj <- dataset_aj %>% dplyr::mutate(VALORES = valor_conta / 10000000000)
 ```
 
 
 Exclusão de linhas duplicadas:
 ```{r}
-dataset_aj <- distinct(dataset_aj)
+dataset_aj <- dplyr::distinct(dataset_aj)
 ```
 
 
 Validação de 4 contas por empresa (2 de receita e 2 de resultado):
 ```{r}
-contagem <- dataset_aj %>% count(CD_CVM, CD_CONTA)
+contagem <- dataset_aj %>% dplyr::count(CD_CVM, CD_CONTA)
 ```  
 Observação: CD_CVM 26034 possui duplicidade (451228)
   
     
 Exclusão da duplicidade identificada:
 ```{r}
-dataset_aj <- dataset_aj %>% filter(!(CD_CVM=="26034"&VALORES==451228))
+dataset_aj <- dataset_aj %>% dplyr::filter(!(CD_CVM=="26034"&VALORES==451228))
 ```  
 
 
@@ -92,13 +92,13 @@ contagem <- dataset_aj %>% count(CD_CVM, CD_CONTA)
 
 Dataset CVM - Dados Cadastrais em xlsx:
 ```{r}
-cadastro <- read_excel("D:/datasets/cvm_data.xlsx")
+cadastro <- readxl::read_excel("D:/datasets/cvm_data.xlsx")
 ```
 
 
 Filtro de dados para mesclagem:
 ```{r}
-cadastro <- cadastro %>% select (CD_CVM, SETOR_ATIV)
+cadastro <- cadastro %>% select(CD_CVM, SETOR_ATIV)
 ```    
 
 
@@ -134,8 +134,8 @@ dataset_aj <- dataset_aj %>%
 
 Remoção de valores infinitos e NaN:
 ```{r}
-infinitos <- is.infinite(dataset_aj$VARIACAO)
-nan <- is.nan(dataset_aj$VARIACAO)
+infinitos <- base::is.infinite(dataset_aj$VARIACAO)
+nan <- base::is.nan(dataset_aj$VARIACAO)
 
 dataset_aj <- dataset_aj %>% mutate(INF = infinitos, NAN = nan) %>% 
                                filter(INF == FALSE & NAN == FALSE)

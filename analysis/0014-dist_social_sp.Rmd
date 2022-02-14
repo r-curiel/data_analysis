@@ -18,8 +18,8 @@ sapply(pacotes, require, character = T)
 
 Carregamento da base de dados
 ```{r message=FALSE, warning=FALSE}
-load("D:\\datasets\\dados_sp.RData")
-shp_sp <- readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
+base::load("D:\\datasets\\dados_sp.RData")
+shp_sp <- rgdal::readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
 ```
 
 
@@ -29,28 +29,28 @@ shp_sp <- readOGR(dsn = "D:\\datasets\\shapefile_sp", layer = "estado_sp")
 União das bases:
 ```{r}
 shp_sp@data %>% 
-  rename(codigo = 2) %>% 
-  mutate(codigo = as.numeric(codigo)) %>% 
-  left_join(dados_sp, by = "codigo") -> shp_sp@data
+  dplyr::rename(codigo = 2) %>% 
+  dplyr::mutate(codigo = as.numeric(codigo)) %>% 
+  dplyr::left_join(dados_sp, by = "codigo") -> shp_sp@data
 ```
 
 
 Visualização da união:
 ```{r}
-head(shp_sp@data)
+utils::head(shp_sp@data)
 ```
 
 
 Distância de corte di(k) - Cut-off com variação de  0.01 desvio-padrão:
 ```{r}
-shp_sp@data["Zpib"] <- scale(shp_sp@data$pib)
+shp_sp@data["Zpib"] <- raster::scale(shp_sp@data$pib)
 ```
 
 
 Visualização estatística:
 ```{r}
-summary(shp_sp@data)
-mean(shp_sp@data$Zpib)
+base::summary(shp_sp@data)
+base::mean(shp_sp@data$Zpib)
 ```
 
 
@@ -113,33 +113,30 @@ distancia_social <- function(x, dmin, dmax, style){
 ```
 
 
-
 Criação de matriz W:
 ```{r}
 matrizW_distsocial <- distancia_social(x = shp_sp@data$Zpib, 
                                        dmin = 0, 
                                        dmax = 0.01, 
                                        style = "B")
+
 colnames(matrizW_distsocial) <- shp_sp@data$NM_MUNICIP
 rownames(matrizW_distsocial) <- shp_sp@data$NM_MUNICIP
 ```
 
 
-Vizinhança por distanciamento social:
+Vizinhança por Distância Social:
 ```{r}
-nb_distsocial <- mat2listw(x = matrizW_distsocial)
+nb_distsocial <- spdep::mat2listw(x = matrizW_distsocial)
 ```
 
 
+### Visualização
 
-Visualização do critério estabelecido:
+Visualização por Distância Social:
 ```{r}
-plot(shp_sp, border = "lightgray")
-plot(nb_distsocial, 
-     coordinates(shp_sp), 
-     add = TRUE, 
-     col = "#FDE725FF")
+raster::plot(shp_sp, border = "lightgray", main = "Vizinhança por Distância Social")
+
+raster::plot(nb_distsocial, coordinates(shp_sp), add = TRUE, col = "#FDE725FF")
 ```
-
-
 

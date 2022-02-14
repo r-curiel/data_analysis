@@ -20,7 +20,7 @@ sapply(pacotes, require, character = T)
 
 Shapefile do Estado
 ```{r message=FALSE, warning=FALSE}
-shape_sp <- readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
+shape_sp <- rgdal::readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
 ```
 
 
@@ -29,14 +29,14 @@ shape_sp <- readOGR(dsn = "D:/datasets/shapefile_sp", layer = "estado_sp")
 
 Visão estrutural:
 ```{r}
-summary(shape_sp)
+base::summary(shape_sp)
 ```
 
 
 Visualização da base de dados:
 ```{r}
-head(shape_sp)
-tail(shape_sp)
+utils::head(shape_sp)
+utils::tail(shape_sp)
 ```
 
 
@@ -58,7 +58,7 @@ head(shape_sp)
 
 Complemento com dados externos:
 ```{r}
-load("D:/datasets/dados_sp.RData")
+base::load("D:/datasets/dados_sp.RData")
 head(dados_sp)
 ```
 
@@ -75,11 +75,9 @@ Plotagem preliminar da variável IDH
 shape_sp@data %>% 
   ggplot() +
   geom_histogram(aes(x = idh),
-                 fill = "deepskyblue4",
                  color = "white") +
   labs(x = "IDH",
-       y = "Frequência") +
-  theme_bw()
+       y = "Frequência")
 ```
 
 
@@ -102,8 +100,7 @@ head(shape_sp_df)
 
 Plotagem ggplot:
 ```{r message=FALSE, warning=FALSE}
-plotly::ggplotly(
-  shape_sp_df %>% 
+shape_sp_df %>% 
     ggplot() +
     geom_polygon(aes(x = long, y = lat, group = group, subgroup = Municp, fill = IDH),
                  color = "black") +
@@ -111,7 +108,6 @@ plotly::ggplotly(
          y = "Latitude",
          color = "IDH") +
     theme_bw()
-)
 ```
 
 
@@ -123,16 +119,19 @@ tm_shape(shp = shape_sp) +
   tm_fill(col = "idh", 
           style = "quantile", 
           n = 4, 
-          palette = "Blues", 
-          legend.hist = TRUE) +
+          palette = "viridis", 
+          legend.hist = TRUE,
+          title = "IDH") +
   tm_layout(legend.text.size = 0.7,
             legend.title.size = 0.9,
             legend.hist.size = 0.5,
             legend.hist.height = 0.2,
             legend.hist.width = 0.3,
             frame = F,
-            main.title = "Distribuição do IDH nos Municípios de SP") +
+            main.title = "Distribuição do IDH nos Municípios de SP"
+            ) +
   tm_borders(alpha = 0.8) +
   tm_compass(type = "8star", 
              show.labels = 3)
 ```
+
