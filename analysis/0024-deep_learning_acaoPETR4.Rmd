@@ -1,0 +1,155 @@
+---
+title: "Deep Learning Rede Neural Recorrente - Ações da Petrobrás"
+author: "Rafael Vinicius Curiel"
+date: "26/03/2022"
+output: html_document
+---
+
+### Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("rnn","dplyr","tidyr")
+sapply(pacotes, require, character = T) 
+```
+
+
+### Carregamento do objeto
+
+Carregamento da base de dados - Ações da Petrobrás
+```{r message=FALSE, warning=FALSE}
+data <- read.csv("D:/datasets/PETR4.SA.csv")
+```
+
+
+
+### Manipulação
+
+Valores de fechamento:
+```{r}
+# Mais novo para o mais antigo
+data <-data[order(data$Date, decreasing = TRUE),]  # Inversão da ordem das colunas
+
+fechamento <- data$Close
+fechamento_anterior <- lead(fechamento,n=1L)
+
+# Mais antigo para o mais novo
+# fechamento_anterior <- data$Close
+# fechamento <- lead(fechamento_anterior,n=1L)
+
+data_analise <- data.frame(fechamento_anterior)
+data_analise$fechamento <- fechamento
+
+data_analise <- drop_na(data_analise)
+```
+
+
+### Modelagem
+
+Features e Targets:
+```{r}
+x <- data_analise[,1]  # Features (fechamento anterior)
+y <- data_analise[,2]  # Targets (fechamento)
+
+X <- matrix(x, nrow = 31)  # 31 é múltiplo de 248 (observações da análise)
+Y <- matrix(y, nrow = 31)  # Gera matriz com 8 colunas e 31 observações
+```
+
+
+Normalização das variáveis:
+```{r}
+Yscaled <- (Y - min(Y)) / (max(Y) - min(Y)) 
+Xscaled <- (X - min(X)) / (max(X) - min(X))
+
+Y <- Yscaled
+X <- Xscaled
+```
+
+
+Train e Test:
+```{r}
+train=1:6
+test=7:8
+```
+
+
+Modelo:
+```{r message=FALSE, warning=FALSE, include=FALSE}
+set.seed(2016)
+model <- trainr(Y = Y[,train],
+                X = X[,train],
+                learningrate = 0.05,
+                hidden_dim = 20,
+                numepochs = 1000,
+                network_type = "rnn"  # Rede Neural Recorrente de Elman
+                )
+```
+
+
+## Treinamento
+```{r}
+Ytrain <- t(matrix(predictr(model, X[,train]),nrow=1))  # Previsão dos targets com base no modelo
+Yreal <- t(matrix(Y[,train],nrow=1))  # Resultados reais
+```
+
+
+R quadrado - Percentual de variação de uma variável explicada por outra
+```{r}
+rsq <- function(y_actual,y_predict){
+  cor(y_actual,y_predict)^2  # Quadrado do coeficiente de correlação (estatística)
+}
+
+rsq(Yreal,Ytrain) * 100
+```
+
+```{r echo=FALSE}
+resultado <- rsq(Yreal,Ytrain) * 100
+print(paste0('As variáveis preditas explicam ',round(resultado, digits=2),'% das variáveis reais.'))
+```
+
+
+Visualização gráfica do ajuste:
+```{r}
+plot(Ytrain, type = "l", col = "darkred")
+lines(Yreal, col = "darkblue", type = "l")
+```
+
+
+## Teste
+```{r}
+Ytest=matrix(Y[,test], nrow = 1)
+Ytest = t(Ytest)
+```
+
+
+Previsão de teste com matriz de resultados:
+```{r}
+# Previsão em teste
+Yp <- predictr(model, X[,test])
+Ypredicted=matrix(Yp, nrow = 1)
+Ypredicted=t(Ypredicted)
+
+# Matriz de resultados
+result_data <- data.frame(Ytest)
+result_data$Ypredicted <- Ypredicted     
+
+head(result_data)
+```
+
+
+R quadrado:
+```{r}
+rsq(result_data$Ytest,result_data$Ypredicted) * 100
+```
+
+```{r echo=FALSE}
+resultado <- rsq(result_data$Ytest,result_data$Ypredicted) * 100
+print(paste0('As variáveis preditas explicam ',round(resultado, digits=2),'% das variáveis de teste.'))
+```
+
+
+Visualização gráfica do ajuste:
+```{r}
+plot(result_data$Ypredicted, type = "l", col = "darkred")
+lines(result_data$Ytest, col = "darkblue", type = "l")
+```

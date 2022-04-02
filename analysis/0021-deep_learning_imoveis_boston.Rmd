@@ -1,0 +1,109 @@
+---
+title: "Deep Learning Contínuo - Valores de Casas em Boston"
+author: "Rafael Vinicius Curiel"
+date: "26/03/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("ggplot2","MASS","neuralnet","ISLR","mlbench","neuralnet","rpart")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados - Valoers de casas no subúrbio de Boston
+```{r message=FALSE, warning=FALSE}
+data <- Boston
+head(data)
+```
+
+
+
+### Exploração
+
+Verificação de Valores Nulos:
+```{r}
+data[is.na(data) == TRUE]
+```
+
+
+
+### Manipulação
+
+Divisão de Treino e Teste:
+```{r}
+#Train-Test Split
+train_test_split_index <- 0.8 * nrow(data)  # Separação de 80% da Base de Dados
+
+train <- data.frame(data[1:train_test_split_index,])  # Delimitação do treino
+test <- data.frame(data[(train_test_split_index+1): nrow(data),])  # Delimitação do que não é o treino
+```
+
+
+Benchmark CART (Classification and Regression Trees) para Comparação
+```{r}
+fit_tree <- rpart(medv ~.,method="anova", data=train)  # Regressão em Ávore para variáveis contínuas (anova)
+tree_predict <- predict(fit_tree, test)  # Previsão dos Valores
+mse_tree <- mean((tree_predict - test$medv)^2)  # Mean Square Error
+mse_tree
+```
+
+
+
+### Neural Network
+
+Padronização dos Dados
+```{r}
+max_data <- apply(data, 2, max)  # Maior valor de cada coluna
+min_data <- apply(data, 2, min)  # Menor valor de cada coluna 
+scaled <- scale(data,center = min_data, scale = max_data - min_data)  # Min Max Scale
+head(scaled)
+```
+
+
+Divisão de Treino e Teste (Amostras Aleatórios):
+```{r}
+index = sample(1:nrow(data),round(0.80*nrow(data)))  # Índices aleatórios
+train_data <- as.data.frame(scaled[index,])  # Delimitação do treino
+test_data <- as.data.frame(scaled[-index,])  # Delimitação do que não é treino
+```
+
+
+### Fit Neuralnet com Multicamadas
+```{r}
+nn <- neuralnet(medv~., data=train_data, hidden=c(5,4,3,2), linear.output=T)
+plot(nn, rep="best")
+```
+
+
+Resultados
+```{r}
+pr.nn <- compute(nn, test_data[,1:13])  # Previsão com a rede (nn = neuralnet)
+pr.nn_ <- pr.nn$net.result*(max(data$medv)-min(data$medv))+min(data$medv)  # Rev. Scale das previsões
+test.r <- (test_data$medv)*(max(data$medv)-min(data$medv))+min(data$medv)  # Rev. Scale do teste
+MSE_nn <- mean((pr.nn_ - test.r)^2)  # Mean Square Error
+MSE_nn
+```
+
+
+### Fit Neuralnet sem Multicamadas (20 neurônios escondidos)
+```{r}
+# Linear.output True para variável contínua
+nn <- neuralnet(medv~., data=train_data, hidden=20, linear.output=T)
+plot(nn, rep="best")
+```
+
+
+Resultados
+```{r}
+pr.nn <- compute(nn, test_data[,1:13])  # Previsão com a rede (nn = neuralnet)
+pr.nn_ <- pr.nn$net.result*(max(data$medv)-min(data$medv))+min(data$medv)  # Rev. Scale das previsões
+test.r <- (test_data$medv)*(max(data$medv)-min(data$medv))+min(data$medv)  # Rev. Scale do teste
+MSE_nn <- mean((pr.nn_ - test.r)^2)  # Mean Square Error
+MSE_nn
+```

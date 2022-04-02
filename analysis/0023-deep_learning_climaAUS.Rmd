@@ -1,0 +1,139 @@
+---
+title: "Deep Learning - Dados Meteorológicos da Austrália"
+author: "Rafael Vinicius Curiel"
+date: "26/03/2022"
+output: html_document
+---
+
+## Pacotes e comandos
+
+Carregamento dos pacotes  
+```{r message=FALSE, warning=FALSE}
+pacotes <- c("ggplot2","rattle","rnn")
+sapply(pacotes, require, character = T) 
+```
+
+
+## Carregamento do objeto
+
+Carregamento da base de dados - Dados Meteorológicos Austrália
+```{r message=FALSE, warning=FALSE}
+data(weatherAUS)
+```
+
+
+
+### Manipulação
+
+Observações para análise (Albury):
+```{r}
+data <- weatherAUS[1:3040,14:15]  # Umidade as 9am e 3pm
+```
+
+
+Resumo dos dados:
+```{r}
+summary(data)
+```
+
+
+Tratamento dos dados:
+```{r}
+data_cleaned <- na.omit(data)  # Omissão dos NA
+data_used=data_cleaned[1:3000,]  # Delimitação para quantidade de observações em múltiplo de 30
+x=data_used[,1]  # Separação das features
+y=data_used[,2]  # Separação das targets
+```
+
+
+Padronização das variáveis e geração das matrizes (30 x 100):
+```{r}
+Yscaled = (y - min(y)) / (max(y) - min(y))
+Xscaled = (x - min(x)) / (max(x) - min(x))
+
+y <- Yscaled
+x <- Xscaled
+
+x <- as.matrix(x)
+y <- as.matrix(y)
+
+X <- matrix(x, nrow = 30)
+Y <- matrix(y, nrow = 30)
+```
+
+
+Delimitação de treino e teste:
+```{r}
+train=1:80
+test=81:100
+```
+
+
+### Modelagem
+
+Treinamento da rede neural recorrente com 100 épocas:
+```{r message=FALSE, warning=FALSE, include=FALSE}
+set.seed(1993)
+model <- trainr(Y = Y[,train],  # Targets
+                X = X[,train],  # Features
+                learningrate = 0.01,
+                hidden_dim = 15,
+                network_type = "rnn",  # Recurrent Neural Networks (alternativas: 'gru', 'lstm')
+                numepochs = 100)
+```
+
+
+Visualização da média dos erros das épocas:
+```{r}
+plot(colMeans(model$error),type='l',xlab='epoch',ylab='errors')
+```
+
+O comportamento de queda acentuada do erro demonstra que a rede está aprendendo.
+
+
+### Predição
+
+Previsões para os testes:
+```{r}
+Yp <- predictr(model, X[,test])
+```
+
+
+Ajuste das matrizes para colunas de origem:
+```{r}
+Ytest <- matrix(Y[,test], nrow = 1)
+Ytest <- t(Ytest)
+Ypredicted <- matrix(Yp, nrow = 1)
+Ypredicted <- t(Ypredicted)
+```
+
+
+DataFrame para comparação dos valores:
+```{r}
+result_data <- data.frame(Ytest)
+result_data$Ypredicted <- Ypredicted
+```
+
+
+Visualização gráfica dos resultados (real e predito):
+```{r}
+plot(as.vector(t(result_data$Ytest)), col = 'red', type='l',
+    main = "Actual vs Predicted Humidity: testing set",
+    ylab = "Y,Yp")
+    lines(as.vector(t(Yp)), type = 'l', col = 'black')
+    legend("bottomright", c("Predicted", "Actual"),
+    col = c("red","black"),
+    lty = c(1,1), lwd = c(1,1))
+```
+
+
+Métrica de comparação:
+```{r}
+# R quadrado - Percentual de variação de uma variável explicada por outra
+rsq <- function(y_actual,y_predict){
+    cor(y_actual, y_predict)^2  # Quadrado do coeficiente de correlação (estatística)
+}
+
+rsq(result_data$Ytest, result_data$Ypredicted)
+```
+A variabilidade do valor predito explica 55% da variabilidade do valor real.
